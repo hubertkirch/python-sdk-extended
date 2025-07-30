@@ -6,10 +6,15 @@ from fast_stark_crypto import get_withdrawal_msg_hash
 
 from x10.perpetual.accounts import StarkPerpetualAccount
 from x10.perpetual.configuration import EndpointConfig, StarknetDomain
-from x10.perpetual.withdrawals import PerpetualWithdrawal, StarkWithdrawalSettlement, Timestamp
+from x10.perpetual.withdrawals import (
+    PerpetualWithdrawal,
+    StarkWithdrawalSettlement,
+    Timestamp,
+)
 from x10.utils.date import utc_now
 from x10.utils.model import SettlementSignatureModel
 from x10.utils.nonce import generate_nonce
+
 
 def calc_expiration_timestamp():
     expire_time = utc_now()

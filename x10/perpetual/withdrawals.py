@@ -1,10 +1,11 @@
 from decimal import Decimal
-from typing import Literal
 
 from x10.utils.model import HexValue, SettlementSignatureModel, X10BaseModel
 
+
 class Timestamp(X10BaseModel):
     seconds: int
+
 
 class StarkWithdrawalSettlement(X10BaseModel):
     recipient: HexValue
