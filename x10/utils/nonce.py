@@ -8,4 +8,4 @@ def generate_nonce() -> int:
     Returns:
         int: A random nonce.
     """
-    return random.randint(0, 2**64 - 1)
+    return random.randint(0, 2**32 - 1)

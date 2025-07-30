@@ -14,6 +14,7 @@ from x10.perpetual.positions import PositionHistoryModel, PositionModel, Positio
 from x10.perpetual.trades import AccountTradeModel, TradeType
 from x10.perpetual.trading_client.base_module import BaseModule
 from x10.perpetual.transfer_object import create_transfer_object
+from x10.perpetual.withdrawal_object import create_withdrawal_object
 from x10.perpetual.transfers import TransferResponseModel
 from x10.utils.http import (
     WrappedApiResponse,
@@ -149,12 +150,16 @@ class AccountModule(BaseModule):
     async def transfer(
         self,
         to_vault: int,
-        to_l2_key: int,
+        to_l2_key: int | str,
         amount: Decimal,
         nonce: int | None = None,
     ) -> WrappedApiResponse[TransferResponseModel]:
         from_vault = self._get_stark_account().vault
         url = self._get_url("/user/transfer/onchain")
+
+        if isinstance(to_l2_key, str):
+            to_l2_key = int(to_l2_key, base=16)
+
         request_model = create_transfer_object(
             from_vault=from_vault,
             to_vault=to_vault,
@@ -173,12 +178,27 @@ class AccountModule(BaseModule):
             api_key=self._get_api_key(),
         )
 
-    async def slow_withdrawal(
+    async def withdraw(
         self,
         amount: Decimal,
-        eth_address: str,
+        stark_address: str,
+        nonce: int | None = None,
     ) -> WrappedApiResponse[int]:
-        raise NotImplementedError("This function is not implemented yet.")
+        url = self._get_url("/user/withdrawal/onchain")
+        request_model = create_withdrawal_object(
+            amount=amount,
+            recipient_stark_address=stark_address,
+            stark_account=self._get_stark_account(),
+            config=self._get_endpoint_config(),
+            nonce=nonce,
+        )
+        return await send_post_request(
+            await self.get_session(),
+            url,
+            int,
+            json=request_model.to_api_request_json(),
+            api_key=self._get_api_key(),
+        )
 
     async def asset_operations(
         self,
