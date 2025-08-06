@@ -77,7 +77,7 @@ class TradingConfigModel(X10BaseModel):
             return Decimal(0)
 
     def round_price(self, price: Decimal, rounding_direction: str = ROUND_CEILING) -> Decimal:
-        return self.price_precision * (price / self.price_precision).to_integral_exact(rounding_direction)
+        return price.quantize(self.min_price_change, rounding=rounding_direction)
 
 
 class L2ConfigModel(X10BaseModel):
