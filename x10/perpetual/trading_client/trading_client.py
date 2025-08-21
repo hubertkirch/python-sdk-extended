@@ -53,6 +53,8 @@ class PerpetualTradingClient:
         time_in_force: TimeInForce = TimeInForce.GTT,
         self_trade_protection_level: SelfTradeProtectionLevel = SelfTradeProtectionLevel.ACCOUNT,
         external_id: Optional[str] = None,
+        builder_fee: Optional[Decimal] = None,
+        builder_id: Optional[int] = None,
     ) -> WrappedApiResponse[PlacedOrderModel]:
         if not self.__stark_account:
             raise ValueError("Stark account is not set")
@@ -81,6 +83,8 @@ class PerpetualTradingClient:
             self_trade_protection_level=self_trade_protection_level,
             starknet_domain=self.__config.starknet_domain,
             order_external_id=external_id,
+            builder_fee=builder_fee,
+            builder_id=builder_id,
         )
         return await self.__order_management_module.place_order(order)
 

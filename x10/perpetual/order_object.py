@@ -44,6 +44,8 @@ def create_order_object(
     time_in_force: TimeInForce = TimeInForce.GTT,
     self_trade_protection_level: SelfTradeProtectionLevel = SelfTradeProtectionLevel.ACCOUNT,
     nonce: Optional[int] = None,
+    builder_fee: Optional[Decimal] = None,
+    builder_id: Optional[int] = None,
 ) -> PerpetualOrderModel:
     """
     Creates an order object to be placed on the exchange using the `place_order` method.
@@ -72,6 +74,8 @@ def create_order_object(
         self_trade_protection_level=self_trade_protection_level,
         starknet_domain=starknet_domain,
         nonce=nonce,
+        builder_fee=builder_fee,
+        builder_id=builder_id
     )
 
 
@@ -93,6 +97,8 @@ def __create_order_object(
     time_in_force: TimeInForce = TimeInForce.GTT,
     self_trade_protection_level: SelfTradeProtectionLevel = SelfTradeProtectionLevel.ACCOUNT,
     nonce: Optional[int] = None,
+    builder_fee: Optional[Decimal] = None,
+    builder_id: Optional[int] = None,
 ) -> PerpetualOrderModel:
     if exact_only:
         raise NotImplementedError("`exact_only` option is not supported yet")
@@ -106,8 +112,9 @@ def __create_order_object(
 
     collateral_amount_human = HumanReadableAmount(synthetic_amount * price, market.collateral_asset)
     synthetic_amount_human = HumanReadableAmount(synthetic_amount, market.synthetic_asset)
+    total_fee = fees.taker_fee_rate + (builder_fee if builder_fee is not None else 0)
     fee_amount_human = HumanReadableAmount(
-        fees.taker_fee_rate * collateral_amount_human.value,
+        total_fee * collateral_amount_human.value,
         market.collateral_asset,
     )
     fee_rate = fees.taker_fee_rate
@@ -162,6 +169,8 @@ def __create_order_object(
         cancel_id=previous_order_external_id,
         settlement=settlement,
         debugging_amounts=debugging_amounts,
+        builderFee=builder_fee,
+        builderId=builder_id,
     )
 
     return order

@@ -3,6 +3,7 @@ import logging
 import logging.config
 import logging.handlers
 import os
+import random
 from asyncio import run
 from decimal import Decimal
 
@@ -82,15 +83,17 @@ async def setup_and_run():
                         baseline_price.price + offset * baseline_price.price * Decimal("0.002"),
                         1,
                     )
+                    external_id = str(random.randint(1, 10000000000000000000000000000000000000000000000000000000000))
                     placed_order = await blocking_client.create_and_place_order(
                         market_name="BTC-USD",
                         amount_of_synthetic=Decimal("0.01"),
                         price=order_price,
                         side=side,
                         post_only=True,
+                        external_id=external_id,
                     )
                     print(f"baseline: {baseline_price.price}, order: {order_price}, id: {placed_order.id}")
-                    await blocking_client.cancel_order(order_id=placed_order.id)
+                    await blocking_client.cancel_order(order_external_id=external_id)
                     await asyncio.sleep(0)
                 else:
                     await asyncio.sleep(1)

@@ -116,12 +116,15 @@ class AccountModule(BaseModule):
             await self.get_session(), url, List[AccountTradeModel], api_key=self._get_api_key()
         )
 
-    async def get_fees(self, *, market_names: List[str]) -> WrappedApiResponse[List[TradingFeeModel]]:
+    async def get_fees(self, *, market_names: List[str], builder_id: Optional[int] = None) -> WrappedApiResponse[List[TradingFeeModel]]:
         """
         https://api.docs.extended.exchange/#get-fees
         """
 
-        url = self._get_url("/user/fees", query={"market": market_names})
+        url = self._get_url("/user/fees", query={
+            "market": market_names,
+            "builderId": builder_id,
+        })
         return await send_get_request(await self.get_session(), url, List[TradingFeeModel], api_key=self._get_api_key())
 
     async def get_leverage(self, market_names: List[str]) -> WrappedApiResponse[List[AccountLeverage]]:
