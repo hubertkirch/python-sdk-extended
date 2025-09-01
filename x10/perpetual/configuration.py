@@ -70,22 +70,6 @@ MAINNET_CONFIG_LEGACY_SIGNING_DOMAIN = EndpointConfig(
     starknet_domain=StarknetDomain(name="Perpetuals", version="v0", chain_id="SN_MAINNET", revision="1"),
 )
 
-
-STARKNET_TESTNET_CONFIG = EndpointConfig(
-    chain_rpc_url="https://rpc.sepolia.org",
-    api_base_url="https://api.starknet.sepolia.extended.exchange/api/v1",
-    stream_url="wss://starknet.sepolia.extended.exchange/stream.extended.exchange/v1",
-    onboarding_url="https://api.starknet.sepolia.extended.exchange",
-    signing_domain="starknet.sepolia.extended.exchange",
-    collateral_asset_contract="",
-    asset_operations_contract="",
-    collateral_asset_on_chain_id="",
-    collateral_decimals=6,
-    starknet_domain=StarknetDomain(name="Perpetuals", version="v0", chain_id="SN_SEPOLIA", revision="1"),
-    collateral_asset_id="0x1",
-)
-
-
 STARKNET_MAINNET_CONFIG = EndpointConfig(
     chain_rpc_url="",
     api_base_url="https://api.starknet.extended.exchange/api/v1",
