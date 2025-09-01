@@ -32,7 +32,7 @@ class OrderManagementModule(BaseModule):
             await self.get_session(),
             url,
             PlacedOrderModel,
-            json=order.to_api_request_json(),
+            json=order.to_api_request_json(exclude_none=True),
             api_key=self._get_api_key(),
         )
         return response

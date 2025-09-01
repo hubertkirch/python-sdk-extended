@@ -151,6 +151,8 @@ class PerpetualOrderModel(X10BaseModel):
     take_profit: Optional[CreateOrderTpslTriggerModel] = None
     stop_loss: Optional[CreateOrderTpslTriggerModel] = None
     debugging_amounts: Optional[StarkDebuggingOrderAmountsModel] = None
+    builderFee: Optional[Decimal] = None
+    builderId: Optional[int] = None
 
 
 class PlacedOrderModel(X10BaseModel):
