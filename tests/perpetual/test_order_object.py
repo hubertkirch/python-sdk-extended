@@ -6,7 +6,7 @@ from freezegun import freeze_time
 from hamcrest import assert_that, equal_to, has_entries
 from pytest_mock import MockerFixture
 
-from x10.perpetual.configuration import STARKNET_TESTNET_CONFIG
+from x10.perpetual.configuration import TESTNET_CONFIG
 from x10.perpetual.orders import OrderSide, SelfTradeProtectionLevel
 from x10.utils.date import utc_now
 
@@ -31,7 +31,7 @@ async def test_create_sell_order_with_default_expiration(
         amount_of_synthetic=Decimal("0.00100000"),
         price=Decimal("43445.11680000"),
         side=OrderSide.SELL,
-        starknet_domain=STARKNET_TESTNET_CONFIG.starknet_domain,
+        starknet_domain=TESTNET_CONFIG.starknet_domain,
     )
     freezer.stop()
     assert_that(
@@ -65,6 +65,8 @@ async def test_create_sell_order_with_default_expiration(
                 "takeProfit": None,
                 "stopLoss": None,
                 "debuggingAmounts": {"collateralAmount": "43445116", "feeAmount": "21723", "syntheticAmount": "-1000"},
+                "builderFee": None,
+                "builderId": None,
             }
         ),
     )
@@ -86,7 +88,7 @@ async def test_create_sell_order(mocker: MockerFixture, create_trading_account, 
         price=Decimal("43445.11680000"),
         side=OrderSide.SELL,
         expire_time=utc_now() + timedelta(days=14),
-        starknet_domain=STARKNET_TESTNET_CONFIG.starknet_domain,
+        starknet_domain=TESTNET_CONFIG.starknet_domain,
         nonce=FROZEN_NONCE,
     )
 
@@ -103,7 +105,7 @@ async def test_create_sell_order(mocker: MockerFixture, create_trading_account, 
                 "reduceOnly": False,
                 "postOnly": False,
                 "timeInForce": "GTT",
-                "expiryEpochMillis": 1705626536860,
+                "expiryEpochMillis": 1705626536861,
                 "fee": "0.0005",
                 "nonce": "1473459052",
                 "selfTradeProtectionLevel": "ACCOUNT",
@@ -121,6 +123,8 @@ async def test_create_sell_order(mocker: MockerFixture, create_trading_account, 
                 "takeProfit": None,
                 "stopLoss": None,
                 "debuggingAmounts": {"collateralAmount": "43445116", "feeAmount": "21723", "syntheticAmount": "-1000"},
+                "builderFee": None,
+                "builderId": None,
             }
         ),
     )
@@ -143,7 +147,7 @@ async def test_create_buy_order(mocker: MockerFixture, create_trading_account, c
         side=OrderSide.BUY,
         expire_time=utc_now() + timedelta(days=14),
         self_trade_protection_level=SelfTradeProtectionLevel.CLIENT,
-        starknet_domain=STARKNET_TESTNET_CONFIG.starknet_domain,
+        starknet_domain=TESTNET_CONFIG.starknet_domain,
     )
 
     assert_that(
@@ -159,7 +163,7 @@ async def test_create_buy_order(mocker: MockerFixture, create_trading_account, c
                 "reduceOnly": False,
                 "postOnly": False,
                 "timeInForce": "GTT",
-                "expiryEpochMillis": 1705626536860,
+                "expiryEpochMillis": 1705626536861,
                 "fee": "0.0005",
                 "nonce": "1473459052",
                 "selfTradeProtectionLevel": "CLIENT",
@@ -177,6 +181,8 @@ async def test_create_buy_order(mocker: MockerFixture, create_trading_account, c
                 "takeProfit": None,
                 "stopLoss": None,
                 "debuggingAmounts": {"collateralAmount": "-43445117", "feeAmount": "21723", "syntheticAmount": "1000"},
+                "builderFee": None,
+                "builderId": None,
             }
         ),
     )
@@ -199,7 +205,7 @@ async def test_cancel_previous_order(mocker: MockerFixture, create_trading_accou
         side=OrderSide.BUY,
         expire_time=utc_now() + timedelta(days=14),
         previous_order_external_id="previous_custom_id",
-        starknet_domain=STARKNET_TESTNET_CONFIG.starknet_domain,
+        starknet_domain=TESTNET_CONFIG.starknet_domain,
     )
 
     assert_that(
@@ -229,7 +235,7 @@ async def test_external_order_id(mocker: MockerFixture, create_trading_account, 
         side=OrderSide.BUY,
         expire_time=utc_now() + timedelta(days=14),
         order_external_id="custom_id",
-        starknet_domain=STARKNET_TESTNET_CONFIG.starknet_domain,
+        starknet_domain=TESTNET_CONFIG.starknet_domain,
     )
 
     assert_that(

@@ -17,7 +17,11 @@ class StarkWithdrawalSettlement(X10BaseModel):
     signature: SettlementSignatureModel
 
 
-class PerpetualWithdrawal(X10BaseModel):
+class WithdrawalRequest(X10BaseModel):
+    account_id: int
     amount: Decimal
-    settlement: StarkWithdrawalSettlement
     description: str | None
+    settlement: StarkWithdrawalSettlement
+    chain_id: str
+    quote_id: str | None = None
+    asset: str

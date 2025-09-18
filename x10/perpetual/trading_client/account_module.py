@@ -1,13 +1,15 @@
 from decimal import Decimal
 from typing import List, Optional
 
-from x10.perpetual.accounts import AccountLeverage
+from x10.perpetual.accounts import AccountLeverage, AccountModel
 from x10.perpetual.assets import (
     AssetOperationModel,
     AssetOperationStatus,
     AssetOperationType,
 )
 from x10.perpetual.balances import BalanceModel
+from x10.perpetual.bridges import BridgesConfig, Quote
+from x10.perpetual.clients import ClientModel
 from x10.perpetual.fees import TradingFeeModel
 from x10.perpetual.orders import OpenOrderModel, OrderSide, OrderType
 from x10.perpetual.positions import PositionHistoryModel, PositionModel, PositionSide
@@ -26,6 +28,14 @@ from x10.utils.model import EmptyModel
 
 
 class AccountModule(BaseModule):
+    async def get_account(self) -> WrappedApiResponse[AccountModel]:
+        url = self._get_url("/user/account/info")
+        return await send_get_request(await self.get_session(), url, AccountModel, api_key=self._get_api_key())
+
+    async def get_client(self) -> WrappedApiResponse[ClientModel]:
+        url = self._get_url("/user/client/info")
+        return await send_get_request(await self.get_session(), url, ClientModel, api_key=self._get_api_key())
+
     async def get_balance(self) -> WrappedApiResponse[BalanceModel]:
         """
         https://api.docs.extended.exchange/#get-balance
@@ -116,15 +126,20 @@ class AccountModule(BaseModule):
             await self.get_session(), url, List[AccountTradeModel], api_key=self._get_api_key()
         )
 
-    async def get_fees(self, *, market_names: List[str], builder_id: Optional[int] = None) -> WrappedApiResponse[List[TradingFeeModel]]:
+    async def get_fees(
+        self, *, market_names: List[str], builder_id: Optional[int] = None
+    ) -> WrappedApiResponse[List[TradingFeeModel]]:
         """
         https://api.docs.extended.exchange/#get-fees
         """
 
-        url = self._get_url("/user/fees", query={
-            "market": market_names,
-            "builderId": builder_id,
-        })
+        url = self._get_url(
+            "/user/fees",
+            query={
+                "market": market_names,
+                "builderId": builder_id,
+            },
+        )
         return await send_get_request(await self.get_session(), url, List[TradingFeeModel], api_key=self._get_api_key())
 
     async def get_leverage(self, market_names: List[str]) -> WrappedApiResponse[List[AccountLeverage]]:
@@ -149,6 +164,30 @@ class AccountModule(BaseModule):
             json=request_model.to_api_request_json(),
             api_key=self._get_api_key(),
         )
+
+    async def get_bridge_config(self) -> WrappedApiResponse[BridgesConfig]:
+        url = self._get_url("/user/bridge/config")
+        return await send_get_request(await self.get_session(), url, BridgesConfig, api_key=self._get_api_key())
+
+    async def get_bridge_quote(self, chain_in: str, chain_out: str, amount: Decimal) -> WrappedApiResponse[Quote]:
+        url = self._get_url(
+            "/user/bridge/quote",
+            query={
+                "chainIn": chain_in,
+                "chainOut": chain_out,
+                "amount": amount,
+            },
+        )
+        return await send_get_request(await self.get_session(), url, Quote, api_key=self._get_api_key())
+
+    async def commit_bridge_quote(self, id: str):
+        url = self._get_url(
+            "/user/bridge/quote",
+            query={
+                "id": id,
+            },
+        )
+        await send_post_request(await self.get_session(), url, EmptyModel, api_key=self._get_api_key())
 
     async def transfer(
         self,
@@ -184,15 +223,45 @@ class AccountModule(BaseModule):
     async def withdraw(
         self,
         amount: Decimal,
-        stark_address: str,
+        chain_id: str = "STRK",
+        stark_address: str | None = None,
         nonce: int | None = None,
+        quote_id: str | None = None,
     ) -> WrappedApiResponse[int]:
-        url = self._get_url("/user/withdrawal/onchain")
+        url = self._get_url("/user/withdrawal")
+        account = (await self.get_account()).data
+        if account is None:
+            raise ValueError("Account not found")
+        if quote_id is None and chain_id != "STRK":
+            raise ValueError("quote_id is required for EVM withdrawals")
+
+        recipient_stark_address = None
+        if stark_address is None:
+            if chain_id == "STRK":
+                client = (await self.get_client()).data
+                if client is None:
+                    raise ValueError("Client not found")
+                if client.starknet_wallet_address is None:
+                    raise ValueError(
+                        "Client does not have attached starknet_wallet_address. Can't determine withdrawal address."
+                    )
+                else:
+                    recipient_stark_address = client.starknet_wallet_address
+            else:
+                if account.bridge_starknet_address is None:
+                    raise ValueError("Account bridge_starknet_address not found")
+                recipient_stark_address = account.bridge_starknet_address
+        else:
+            recipient_stark_address = stark_address
+
         request_model = create_withdrawal_object(
             amount=amount,
-            recipient_stark_address=stark_address,
+            recipient_stark_address=recipient_stark_address,
             stark_account=self._get_stark_account(),
             config=self._get_endpoint_config(),
+            account_id=account.id,
+            chain_id=chain_id,
+            quote_id=quote_id,
             nonce=nonce,
         )
         return await send_post_request(

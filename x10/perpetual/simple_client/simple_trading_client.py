@@ -2,7 +2,7 @@ import asyncio
 import dataclasses
 import time
 from decimal import Decimal
-from typing import Awaitable, Dict, Union, cast, Optional
+from typing import Awaitable, Dict, Union, cast
 
 from x10.perpetual.accounts import AccountStreamDataModel, StarkPerpetualAccount
 from x10.perpetual.configuration import EndpointConfig
@@ -203,8 +203,8 @@ class BlockingTradingClient:
         post_only: bool = False,
         previous_order_external_id: str | None = None,
         external_id: str | None = None,
-        builder_fee: str | None = None,
-        builder_id: str | None = None,
+        builder_fee: Decimal | None = None,
+        builder_id: int | None = None,
     ) -> TimedOpenOrderModel:
         market = (await self.get_markets()).get(market_name)
         if not market:
@@ -221,7 +221,7 @@ class BlockingTradingClient:
             starknet_domain=self.__endpoint_config.starknet_domain,
             order_external_id=external_id,
             builder_fee=builder_fee,
-            builder_id=builder_id
+            builder_id=builder_id,
         )
 
         if order.id in self.__order_waiters:
