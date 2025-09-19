@@ -55,6 +55,7 @@ class PerpetualTradingClient:
         external_id: Optional[str] = None,
         builder_fee: Optional[Decimal] = None,
         builder_id: Optional[int] = None,
+        reduce_only: bool = False,
     ) -> WrappedApiResponse[PlacedOrderModel]:
         if not self.__stark_account:
             raise ValueError("Stark account is not set")
@@ -85,6 +86,7 @@ class PerpetualTradingClient:
             order_external_id=external_id,
             builder_fee=builder_fee,
             builder_id=builder_id,
+            reduce_only=reduce_only,
         )
         return await self.__order_management_module.place_order(order)
 
