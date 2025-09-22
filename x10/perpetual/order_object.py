@@ -46,6 +46,7 @@ def create_order_object(
     nonce: Optional[int] = None,
     builder_fee: Optional[Decimal] = None,
     builder_id: Optional[int] = None,
+    reduce_only: bool = False,
 ) -> PerpetualOrderModel:
     """
     Creates an order object to be placed on the exchange using the `place_order` method.
@@ -76,6 +77,7 @@ def create_order_object(
         nonce=nonce,
         builder_fee=builder_fee,
         builder_id=builder_id,
+        reduce_only=reduce_only,
     )
 
 
@@ -99,6 +101,7 @@ def __create_order_object(
     nonce: Optional[int] = None,
     builder_fee: Optional[Decimal] = None,
     builder_id: Optional[int] = None,
+    reduce_only: bool = False,
 ) -> PerpetualOrderModel:
     if exact_only:
         raise NotImplementedError("`exact_only` option is not supported yet")
@@ -171,6 +174,7 @@ def __create_order_object(
         debugging_amounts=debugging_amounts,
         builderFee=builder_fee,
         builderId=builder_id,
+        reduce_only=reduce_only,
     )
 
     return order
