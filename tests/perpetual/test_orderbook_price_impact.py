@@ -4,6 +4,7 @@ from unittest import TestCase
 from x10.perpetual.configuration import TESTNET_CONFIG
 from x10.perpetual.orderbook import OrderBook
 from x10.perpetual.orderbooks import OrderbookUpdateModel
+import asyncio
 
 
 class TestOrderBook(TestCase):
@@ -16,9 +17,9 @@ class TestOrderBook(TestCase):
             best_ask_change_callback=None,
             best_bid_change_callback=None,
         )
-        self.populate_dummy_data()
+        asyncio.run(self.populate_dummy_data())
 
-    def populate_dummy_data(self):
+    async def populate_dummy_data(self):
         dummy_data = OrderbookUpdateModel(
             market=self.market_name,
             bid=[
@@ -32,7 +33,7 @@ class TestOrderBook(TestCase):
                 {"price": decimal.Decimal("103"), "qty": decimal.Decimal("1")},
             ],
         )
-        self.orderbook.update_orderbook(dummy_data)
+        await self.orderbook.update_orderbook(dummy_data)
 
     def test_calculate_impact_partial_buy(self):
         notional = decimal.Decimal("105")
