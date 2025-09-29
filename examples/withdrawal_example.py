@@ -2,7 +2,7 @@ from asyncio import run
 from decimal import Decimal
 
 from x10.perpetual.accounts import StarkPerpetualAccount
-from x10.perpetual.configuration import STARKNET_MAINNET_CONFIG
+from x10.perpetual.configuration import MAINNET_CONFIG
 from x10.perpetual.trading_client import PerpetualTradingClient
 
 
@@ -14,7 +14,7 @@ async def setup_and_run():
         api_key="<>",
     )
     trading_client = PerpetualTradingClient(
-        endpoint_config=STARKNET_MAINNET_CONFIG,
+        endpoint_config=MAINNET_CONFIG,
         stark_account=stark_account,
     )
 

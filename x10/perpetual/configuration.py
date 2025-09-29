@@ -39,38 +39,6 @@ TESTNET_CONFIG = EndpointConfig(
 )
 
 MAINNET_CONFIG = EndpointConfig(
-    chain_rpc_url="https://cloudflare-eth.com",
-    api_base_url="https://api.extended.exchange/api/v1",
-    stream_url="wss://api.extended.exchange/stream.extended.exchange/v1",
-    onboarding_url="https://api.extended.exchange",
-    signing_domain="extended.exchange",
-    collateral_asset_contract="0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-    asset_operations_contract="0x1cE5D7f52A8aBd23551e91248151CA5A13353C65",
-    collateral_asset_on_chain_id="0x2893294412a4c8f915f75892b395ebbf6859ec246ec365c3b1f56f47c3a0a5d",
-    collateral_decimals=6,
-    collateral_asset_id="0x1",
-    starknet_domain=StarknetDomain(name="Perpetuals", version="v0", chain_id="SN_MAINNET", revision="1"),
-)
-
-"""
-Identical to the MAINNET_CONFIG, but with a different signing domain.
-Use it for accounts that were created before the signing domain was changed.
-"""
-MAINNET_CONFIG_LEGACY_SIGNING_DOMAIN = EndpointConfig(
-    chain_rpc_url="https://cloudflare-eth.com",
-    api_base_url="https://api.extended.exchange/api/v1",
-    stream_url="wss://api.extended.exchange/stream.extended.exchange/v1",
-    onboarding_url="https://api.extended.exchange",
-    signing_domain="x10.exchange",
-    collateral_asset_contract="0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-    asset_operations_contract="0x1cE5D7f52A8aBd23551e91248151CA5A13353C65",
-    collateral_asset_on_chain_id="0x2893294412a4c8f915f75892b395ebbf6859ec246ec365c3b1f56f47c3a0a5d",
-    collateral_decimals=6,
-    collateral_asset_id="0x1",
-    starknet_domain=StarknetDomain(name="Perpetuals", version="v0", chain_id="SN_MAINNET", revision="1"),
-)
-
-STARKNET_MAINNET_CONFIG = EndpointConfig(
     chain_rpc_url="",
     api_base_url="https://api.starknet.extended.exchange/api/v1",
     stream_url="wss://api.starknet.extended.exchange/stream.extended.exchange/v1",
@@ -83,3 +51,5 @@ STARKNET_MAINNET_CONFIG = EndpointConfig(
     starknet_domain=StarknetDomain(name="Perpetuals", version="v0", chain_id="SN_MAIN", revision="1"),
     collateral_asset_id="0x1",
 )
+
+STARKNET_MAINNET_CONFIG = MAINNET_CONFIG

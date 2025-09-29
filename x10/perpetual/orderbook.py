@@ -1,9 +1,10 @@
 import asyncio
 import dataclasses
 import decimal
+from collections.abc import Awaitable
 from typing import Callable, Iterable, Tuple
 
-from sortedcontainers import SortedDict  # type: ignore[import-untyped]
+from sortedcontainers import SortedDict
 
 from x10.perpetual.configuration import EndpointConfig
 from x10.perpetual.orderbooks import OrderbookUpdateModel
@@ -31,8 +32,8 @@ class OrderBook:
     async def create(
         endpoint_config: EndpointConfig,
         market_name: str,
-        best_ask_change_callback: Callable[[OrderBookEntry | None], None] | None = None,
-        best_bid_change_callback: Callable[[OrderBookEntry | None], None] | None = None,
+        best_ask_change_callback: Callable[[OrderBookEntry | None], Awaitable[None]] | None = None,
+        best_bid_change_callback: Callable[[OrderBookEntry | None], Awaitable[None]] | None = None,
         start=False,
         depth_1: bool = False,
     ) -> "OrderBook":
@@ -50,18 +51,18 @@ class OrderBook:
         self,
         endpoint_config: EndpointConfig,
         market_name: str,
-        best_ask_change_callback: Callable[[OrderBookEntry | None], None] | None = None,
-        best_bid_change_callback: Callable[[OrderBookEntry | None], None] | None = None,
+        best_ask_change_callback: Callable[[OrderBookEntry | None], Awaitable[None]] | None = None,
+        best_bid_change_callback: Callable[[OrderBookEntry | None], Awaitable[None]] | None = None,
     ) -> None:
         self.__stream_client = PerpetualStreamClient(api_url=endpoint_config.stream_url)
         self.__market_name = market_name
         self.__task: asyncio.Task | None = None
-        self._bid_prices: SortedDict[decimal.Decimal, OrderBookEntry] = SortedDict()
-        self._ask_prices: SortedDict[decimal.Decimal, OrderBookEntry] = SortedDict()
+        self._bid_prices: "SortedDict[decimal.Decimal, OrderBookEntry]" = SortedDict()  # type: ignore
+        self._ask_prices: "SortedDict[decimal.Decimal, OrderBookEntry]" = SortedDict()  # type: ignore
         self.best_ask_change_callback = best_ask_change_callback
         self.best_bid_change_callback = best_bid_change_callback
 
-    def update_orderbook(self, data: OrderbookUpdateModel):
+    async def update_orderbook(self, data: OrderbookUpdateModel):
         best_bid_before_update = self.best_bid()
         for bid in data.bid:
             if bid.price in self._bid_prices:
@@ -77,7 +78,7 @@ class OrderBook:
         now_best_bid = self.best_bid()
         if best_bid_before_update != now_best_bid:
             if self.best_bid_change_callback:
-                self.best_bid_change_callback(now_best_bid)
+                await self.best_bid_change_callback(now_best_bid)
 
         best_ask_before_update = self.best_ask()
         for ask in data.ask:
@@ -94,7 +95,7 @@ class OrderBook:
         now_best_ask = self.best_ask()
         if best_ask_before_update != now_best_ask:
             if self.best_ask_change_callback:
-                self.best_ask_change_callback(now_best_ask)
+                await self.best_ask_change_callback(now_best_ask)
 
     def init_orderbook(self, data: OrderbookUpdateModel):
         for bid in data.bid:
@@ -123,7 +124,7 @@ class OrderBook:
                         elif event.type == StreamDataType.DELTA.value:
                             if not event.data:
                                 continue
-                            self.update_orderbook(event.data)
+                            await self.update_orderbook(event.data)
                 print("Orderbook stream disconnected, reconnecting...")
                 await asyncio.sleep(1)
 
