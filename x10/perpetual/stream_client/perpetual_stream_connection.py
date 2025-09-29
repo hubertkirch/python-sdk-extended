@@ -36,9 +36,11 @@ class PerpetualStreamConnection(Generic[StreamMsgResponseType]):
         self.__websocket = None
 
     async def send(self, data):
+        assert self.__websocket is not None
         await self.__websocket.send(data)
 
     async def recv(self) -> StreamMsgResponseType:
+        assert self.__websocket is not None
         return await self.__receive()
 
     async def close(self):

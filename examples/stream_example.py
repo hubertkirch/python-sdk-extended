@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import signal
+from typing import Any
 
 from examples.utils import init_logging
 from x10.perpetual.configuration import TESTNET_CONFIG
@@ -59,7 +60,7 @@ async def merge_streams_example():
     signal.signal(signal.SIGINT, sigint_handler)
 
     stream_client = PerpetualStreamClient(api_url=TESTNET_CONFIG.stream_url)
-    queue = asyncio.Queue()
+    queue: asyncio.Queue[tuple[str, Any]] = asyncio.Queue()
 
     async def run_producer_stream1():
         async with stream_client.subscribe_to_orderbooks("BTC-USD") as stream1:

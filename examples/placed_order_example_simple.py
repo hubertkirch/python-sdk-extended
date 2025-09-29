@@ -37,6 +37,11 @@ async def clean_it(trading_client: PerpetualTradingClient):
 
 
 async def setup_and_run():
+    assert API_KEY is not None
+    assert PUBLIC_KEY is not None
+    assert PRIVATE_KEY is not None
+    assert VAULT_ID is not None
+
     stark_account = StarkPerpetualAccount(
         vault=VAULT_ID,
         private_key=PRIVATE_KEY,

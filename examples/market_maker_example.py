@@ -1,15 +1,14 @@
 import asyncio
-import math
+import datetime
+import random
 from decimal import Decimal
-
-from eth_account import Account
-from eth_account.signers.local import LocalAccount
+from typing import Dict
 
 from x10.perpetual.accounts import StarkPerpetualAccount
-from x10.perpetual.configuration import TESTNET_CONFIG
+from x10.perpetual.configuration import MAINNET_CONFIG
+from x10.perpetual.orderbook import OrderBook
 from x10.perpetual.orders import OrderSide
 from x10.perpetual.trading_client.trading_client import PerpetualTradingClient
-from x10.perpetual.user_client.user_client import UserClient
 
 
 async def build_markets_cache(trading_client: PerpetualTradingClient):
@@ -20,96 +19,122 @@ async def build_markets_cache(trading_client: PerpetualTradingClient):
 
 # flake8: noqa
 async def on_board_example():
-    environment_config = TESTNET_CONFIG
-    eth_account_1: LocalAccount = Account.from_key("<YOUR_ETH_PRIVATE_KEY>")
-    onboarding_client = UserClient(endpoint_config=environment_config, l1_private_key=eth_account_1.key.hex)
-    root_account = await onboarding_client.onboard()
-
-    trading_key = await onboarding_client.create_account_api_key(root_account.account, "trading_key")
+    environment_config = MAINNET_CONFIG
 
     root_trading_client = PerpetualTradingClient(
         environment_config,
         StarkPerpetualAccount(
-            vault=root_account.account.l2_vault,
-            private_key=root_account.l2_key_pair.private_hex,
-            public_key=root_account.l2_key_pair.public_hex,
-            api_key=trading_key,
+            vault=200027,
+            private_key="<>",
+            public_key="<>",
+            api_key="<>",
         ),
     )
 
-    print(f"User 1 v: {root_account.account.l2_vault}")
-    print(f"User 1 pub: {root_account.l2_key_pair.public_hex}")
-    print(f"User 1 priv: {root_account.l2_key_pair.private_hex}")
+    markets = await build_markets_cache(root_trading_client)
+    market = markets["APEX-USD"]
 
-    while True:
-        markets = await build_markets_cache(root_trading_client)
-        try:
-            for market in markets.values():
-                print(f"Market: {market.name}")
-                price_offset = (Decimal(hash(market.name) % 3 - 1) / Decimal(100)) * Decimal(1)
-                await root_trading_client.orders.mass_cancel(
-                    markets=[market.name],
-                )
+    best_ask_condition = asyncio.Condition()
+    best_bid_condition = asyncio.Condition()
 
-                if "BTC" not in market.name:  # Example for a specific market
-                    print(f"Skipping {market.name} market")
+    async def react_to_best_ask_change(best_ask):
+        async with best_ask_condition:
+            print(f"Best ask changed: {best_ask}")
+            best_ask_condition.notify_all()
+
+    async def react_to_best_bid_change(best_bid):
+        async with best_bid_condition:
+            print(f"Best bid changed: {best_bid}")
+            best_bid_condition.notify_all()
+
+    order_book = await OrderBook.create(
+        MAINNET_CONFIG,
+        market.name,
+        start=True,
+        best_ask_change_callback=react_to_best_ask_change,
+        best_bid_change_callback=react_to_best_bid_change,
+    )
+
+    tasks = []
+    price_offset_per_level_percent = Decimal("0.3")
+    num_of_price_levels = 2
+
+    cancelled_orders: Dict[str, datetime.datetime] = {}
+
+    for i in range(num_of_price_levels):
+
+        async def task(i: int, side: OrderSide):
+            price_offset_for_level_percent = price_offset_per_level_percent * Decimal(i + 1)
+            prev_order_id: int | None = None
+            prev_order_price: Decimal | None = None
+
+            while True:
+                if side == OrderSide.SELL.value:
+                    async with best_ask_condition:
+                        await best_ask_condition.wait()
+                        current_best = order_book.best_ask()
+                else:
+                    async with best_bid_condition:
+                        await best_bid_condition.wait()
+                        current_best = order_book.best_bid()
+
+                if current_best is None:
                     continue
 
-                mark_price = market.market_stats.mark_price
-                print(f"Mark Price: {mark_price}")
-                print(f"price offset: {price_offset}")
-                print(f"Min order size: {market.trading_config.min_order_size}")
-                base_target = market.trading_config.max_position_value / Decimal(1000)
-                sell_prices = [
-                    (
-                        Decimal(base_target * (i + 1)),
-                        round(
-                            mark_price + mark_price * Decimal((i * 0.2) / 100.0) + price_offset * mark_price,
-                            market.trading_config.price_precision,
-                        ),
-                    )
-                    for i in range(10)
-                ]
-                buy_prices = [
-                    (
-                        Decimal(base_target * (i + 1)),
-                        round(
-                            mark_price - mark_price * Decimal((i * 0.2) / 100.0) + price_offset * mark_price,
-                            market.trading_config.price_precision,
-                        ),
-                    )
-                    for i in range(10)
-                ]
+                offset_direction = Decimal(1 if side == OrderSide.SELL else -1)
 
-                for target_value, sell_price in sell_prices:
-                    order_size = order_size = market.trading_config.calculate_order_size_from_value(
-                        order_value=target_value, order_price=sell_price
-                    )
-                    print(f"Sell Price: {sell_price}, order size: {order_size}")
+                current_price = current_best.price
+                target_price = market.trading_config.round_price(
+                    current_price + offset_direction * current_price * (price_offset_for_level_percent / Decimal("100"))
+                )
+
+                actual_delta = (
+                    abs(((prev_order_price - current_price) / current_price)) if prev_order_price is not None else 0
+                )
+
+                target_delta = price_offset_for_level_percent / Decimal("100")
+
+                max_delta_allowed = target_delta + target_delta * price_offset_per_level_percent / (
+                    Decimal(1) + Decimal(i) / Decimal(num_of_price_levels)
+                )
+
+                min_delta_required = target_delta - target_delta * price_offset_per_level_percent * (
+                    Decimal(1) + Decimal(i) / Decimal(num_of_price_levels)
+                )
+
+                if prev_order_price is None or (actual_delta < min_delta_required or actual_delta > max_delta_allowed):
+                    print(f"Repricing {side} order from {prev_order_price} to {target_price}, price level {i}")
+                    if prev_order_id is not None:
+                        print(f"Cancelling previous order {prev_order_id}")
+                        asyncio.create_task(
+                            root_trading_client.orders.cancel_order_by_external_id(order_external_id=str(prev_order_id))
+                        )
+                    new_id = random.randint(0, 10000000000000000000000000)
+                    print(f"Placing {side} order {new_id} at {target_price}, price level {i}")
                     try:
-                        order_response_1 = await root_trading_client.place_order(
+                        await root_trading_client.place_order(
                             market_name=market.name,
-                            amount_of_synthetic=order_size,
-                            price=sell_price,
-                            side=OrderSide.SELL,
+                            amount_of_synthetic=market.trading_config.min_order_size,
+                            price=target_price,
+                            side=side,
+                            external_id=str(new_id),
+                            post_only=True,
                         )
                     except Exception as e:
-                        print(f"Error: {e}")
-                for target_value, buy_price in buy_prices:
-                    order_size = market.trading_config.calculate_order_size_from_value(
-                        order_value=target_value, order_price=buy_price
-                    )
-                    print(f"Buy Price: {buy_price}, order size: {order_size}")
-                    try:
-                        order_response_2 = await root_trading_client.place_order(
-                            market_name=market.name,
-                            amount_of_synthetic=order_size,
-                            price=buy_price,
-                            side=OrderSide.BUY,
-                        )
-                    except Exception as e:
-                        print(f"Error: {e}")
-                await asyncio.sleep(30)
+                        print(f"Error placing order {new_id} at {target_price}, price level {i}: {e}")
+                        continue
+                    prev_order_id = new_id
+                    prev_order_price = target_price
+                else:
+                    pass
+
+        tasks.append(asyncio.create_task(task(i=i, side=OrderSide.SELL)))
+        tasks.append(asyncio.create_task(task(i=i, side=OrderSide.BUY)))
+
+    while True:
+        try:
+            await asyncio.gather(*tasks)
+            await asyncio.sleep(30)
         except Exception as e:
             print(f"Error: {e}")
 
