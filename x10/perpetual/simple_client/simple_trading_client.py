@@ -13,6 +13,7 @@ from x10.perpetual.orders import (
     OrderSide,
     OrderStatus,
     PerpetualOrderModel,
+    TimeInForce,
 )
 from x10.perpetual.stream_client.perpetual_stream_connection import (
     PerpetualStreamConnection,
@@ -110,20 +111,16 @@ class BlockingTradingClient:
                 cancel_waiter.condition.notify_all()
 
     async def __handle_update(self, order: OpenOrderModel):
-        if order.status == OrderStatus.NEW.value:
-            if order.external_id not in self.__order_waiters:
-                return
-            order_waiter = self.__order_waiters.get(order.external_id)
-            if not order_waiter:
-                return
-            if order_waiter.condition:
-                async with order_waiter.condition:
-                    order_waiter.open_order = TimedOpenOrderModel(
-                        start_nanos=order_waiter.start_nanos,
-                        end_nanos=time.time_ns(),
-                        open_order=order,
-                    )
-                    order_waiter.condition.notify_all()
+        order_waiter: OrderWaiter | None = self.__order_waiters.get(order.external_id)
+        if not order_waiter:
+            return
+        async with order_waiter.condition:
+            order_waiter.open_order = TimedOpenOrderModel(
+                start_nanos=order_waiter.start_nanos,
+                end_nanos=time.time_ns(),
+                open_order=order,
+            )
+            order_waiter.condition.notify_all()
 
     async def __handle_order(self, order: OpenOrderModel):
         if order.status == OrderStatus.CANCELLED.value:
@@ -205,6 +202,7 @@ class BlockingTradingClient:
         external_id: str | None = None,
         builder_fee: Decimal | None = None,
         builder_id: int | None = None,
+        time_in_force: TimeInForce = TimeInForce.GTT,
     ) -> TimedOpenOrderModel:
         market = (await self.get_markets()).get(market_name)
         if not market:
@@ -222,6 +220,7 @@ class BlockingTradingClient:
             order_external_id=external_id,
             builder_fee=builder_fee,
             builder_id=builder_id,
+            time_in_force=time_in_force,
         )
 
         if order.id in self.__order_waiters:
@@ -243,3 +242,9 @@ class BlockingTradingClient:
             if not open_model:
                 raise ValueError("No Fill or Placement received for order")
             return open_model
+
+    async def close(self):
+        if self.__stream_task:
+            self.__stream_task.cancel()
+        if self.__account_stream:
+            await self.__account_stream.close()
