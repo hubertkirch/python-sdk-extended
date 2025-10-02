@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [ starknet ]
-    types: [ opened, reopened, synchronize, ready_for_review ]
+#    types: [ opened, reopened, synchronize, ready_for_review ]
 
 jobs:
   code-checks:
