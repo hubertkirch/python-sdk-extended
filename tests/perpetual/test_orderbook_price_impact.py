@@ -1,10 +1,10 @@
+import asyncio
 import decimal
 from unittest import TestCase
 
 from x10.perpetual.configuration import TESTNET_CONFIG
 from x10.perpetual.orderbook import OrderBook
 from x10.perpetual.orderbooks import OrderbookUpdateModel
-import asyncio
 
 
 class TestOrderBook(TestCase):
