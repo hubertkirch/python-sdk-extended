@@ -1343,47 +1343,41 @@ test = ["pytest (>=6)"]
 
 [[package]]
 name = "fast-stark-crypto"
-version = "0.3.6a0"
+version = "0.3.7"
 description = ""
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "fast_stark_crypto-0.3.6a0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d1c2891d26d33eaba39280afdb7e9ef1defa927502733883224c7398f19725e6"},
-    {file = "fast_stark_crypto-0.3.6a0-cp310-cp310-manylinux_2_24_aarch64.whl", hash = "sha256:119f1923d64aeefdc7b7a376f7c08eeae691132444adda45e06cd01a0f68834c"},
-    {file = "fast_stark_crypto-0.3.6a0-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:443ad787d28493ad7e304d01b9df621d8782ab382b6b028827d0b88066c5f61b"},
-    {file = "fast_stark_crypto-0.3.6a0-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:6911786a96ab0ae83dbc249ce6ca62df9708374560f41998a72b85ec4415ca3a"},
-    {file = "fast_stark_crypto-0.3.6a0-cp310-cp310-win_amd64.whl", hash = "sha256:586ad9032b493e5015c9c77cd829bbdad9bdce60e388f2adda8e3ac2dbb8262b"},
-    {file = "fast_stark_crypto-0.3.6a0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:a5d5654e230ff75948659b4bb056f674a537ebed599f47015134f0e9bdc2a23f"},
-    {file = "fast_stark_crypto-0.3.6a0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:969fe66d8062b335abfa05ddfe1fee1ba25b05147d800d3858697c1de59d1cb6"},
-    {file = "fast_stark_crypto-0.3.6a0-cp311-cp311-manylinux_2_24_aarch64.whl", hash = "sha256:44886b2c612a6b9d7a84084106f9aab90e69bde0d0c2a399350ef9c81a64fa6c"},
-    {file = "fast_stark_crypto-0.3.6a0-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:ff8f37cbf8b5a60a4d41b1391bdcf2200ca0afe0cecdcf0c3e1ad6ec3e5884f4"},
-    {file = "fast_stark_crypto-0.3.6a0-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:054c6c6e8bf5fac4e198a5e58b049998348809c47f17316ff55bbc52d3ea7741"},
-    {file = "fast_stark_crypto-0.3.6a0-cp311-cp311-win_amd64.whl", hash = "sha256:543c22432905157846b0b2ca0592a1f826f2603f38d9fbaa70f8ea28e809dee4"},
-    {file = "fast_stark_crypto-0.3.6a0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:6fb7f559be820a6d820111f5feb909b77ce98aaf12f77227a16de1db92ddb901"},
-    {file = "fast_stark_crypto-0.3.6a0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5c82adb14b4adee8779e7bfd20be95d24bd8585e3f726329f10e748a5a3bbe19"},
-    {file = "fast_stark_crypto-0.3.6a0-cp312-cp312-manylinux_2_24_aarch64.whl", hash = "sha256:c2b6172bc5714b44704a731e5055c302cf65d02ab312ea4c6bcb81109adb6b87"},
-    {file = "fast_stark_crypto-0.3.6a0-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:31ab89bf084204dd3833b48b70e49b25a2b0c146547d46a565640aa0e435eadb"},
-    {file = "fast_stark_crypto-0.3.6a0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:417b008690e8c82ec088a771035ba87bacb61d966d31fbf8fe6587af4f0237ba"},
-    {file = "fast_stark_crypto-0.3.6a0-cp312-cp312-win_amd64.whl", hash = "sha256:4e82127e7c654caf09c97dc1fc1c26062e59d97ba8dd815fa74f1c0b92728cbc"},
-    {file = "fast_stark_crypto-0.3.6a0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:efcf7d3a2fc0c90390d23ec217752d064bacb64b16bc816c966597169f3fdc8d"},
-    {file = "fast_stark_crypto-0.3.6a0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:018dbc078f8df09eb79e5d9b3ed8f132432dca0d342a48fc2daa1f8ffc4cc7d4"},
-    {file = "fast_stark_crypto-0.3.6a0-cp313-cp313-manylinux_2_24_aarch64.whl", hash = "sha256:8086dcd0859a0042e6a59bbcd6842804d6e79ad7b22aa603776742f8e18a1de6"},
-    {file = "fast_stark_crypto-0.3.6a0-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:e81e70a9ff45d3429b0f84d85e5a06f0978986a69d20cd4fff7db992a68bc943"},
-    {file = "fast_stark_crypto-0.3.6a0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:921348b4f382c728ba6d64d7fd8019e97d5a95fe8250149431d356796e144ceb"},
-    {file = "fast_stark_crypto-0.3.6a0-cp313-cp313-win_amd64.whl", hash = "sha256:b7adf46d886481302f44127bea161dcfe5bd189d875761526a93308cf460ecb3"},
-    {file = "fast_stark_crypto-0.3.6a0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0453385b0335d0810b58351cd8ced8f853fd7960c2cb0e9f37174736f5518a6d"},
-    {file = "fast_stark_crypto-0.3.6a0-cp39-cp39-manylinux_2_24_aarch64.whl", hash = "sha256:4f9f01a5c4a2a87bbbcb5a46f38a858cd9d47d73ed618b3fe0747f658a238f5a"},
-    {file = "fast_stark_crypto-0.3.6a0-cp39-cp39-musllinux_1_2_aarch64.whl", hash = "sha256:55410f802e512304645cc36b7e3a05ccfdc2823586011b9181efae5ab953d80a"},
-    {file = "fast_stark_crypto-0.3.6a0-cp39-cp39-musllinux_1_2_x86_64.whl", hash = "sha256:177c5fdf7da2b5bd65e36a31bc73ba950b0772d4032f45ec0a26b5ef2389fcb3"},
-    {file = "fast_stark_crypto-0.3.6a0-cp39-cp39-win_amd64.whl", hash = "sha256:75fe61c8e97402230a0a5bd2a9a9cff4ec69a67f49bd85b72fb3057288877c68"},
-    {file = "fast_stark_crypto-0.3.6a0-pp310-pypy310_pp73-musllinux_1_2_aarch64.whl", hash = "sha256:683b7f3a111665aa880c1cf51f9af532d1fab0b0d7580409303a355719022350"},
-    {file = "fast_stark_crypto-0.3.6a0-pp310-pypy310_pp73-musllinux_1_2_x86_64.whl", hash = "sha256:541619ed59b8d777bfb3365688abc56428c6afd69c436d512c5d480db36aa0f1"},
-    {file = "fast_stark_crypto-0.3.6a0-pp311-pypy311_pp73-musllinux_1_2_aarch64.whl", hash = "sha256:4b14a327dec249d559972352953c260c9c36820a303b5ebb56d7a978b9a7a0bd"},
-    {file = "fast_stark_crypto-0.3.6a0-pp311-pypy311_pp73-musllinux_1_2_x86_64.whl", hash = "sha256:27a543b9cf28209520d996540c07a2983dd60921dba6e30b33dca3f14378b3f3"},
-    {file = "fast_stark_crypto-0.3.6a0-pp39-pypy39_pp73-musllinux_1_2_aarch64.whl", hash = "sha256:4068d25b1767e5834e1972e90458fc02d7e1dd6204b74cc974685e644fc5682d"},
-    {file = "fast_stark_crypto-0.3.6a0-pp39-pypy39_pp73-musllinux_1_2_x86_64.whl", hash = "sha256:22ec46c03ad7506decb6514ca61713bda4634f05b4de9a6c7c7618220099fd24"},
-    {file = "fast_stark_crypto-0.3.6a0.tar.gz", hash = "sha256:41c894401ac344ef7f67c547c7cf755c0aeba01f36f397a971df39463aa7a5c4"},
+    {file = "fast_stark_crypto-0.3.7-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1abb7339ebec37b1443a6d847c57f3fc087943559342201afda862ad08c1793a"},
+    {file = "fast_stark_crypto-0.3.7-cp310-cp310-manylinux_2_24_aarch64.whl", hash = "sha256:72988e8b4195b9fc318f15492b563d41865fada2261fc89e5ffb0bfdae21967b"},
+    {file = "fast_stark_crypto-0.3.7-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:6840e718d48ac582f829f540673c8a376553e887d5923217d6c3f896906bfab8"},
+    {file = "fast_stark_crypto-0.3.7-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:c2cf2541d07708157ab5a3c3ff81ef4264d27efaa7a246de7ab55b650b9e4a9d"},
+    {file = "fast_stark_crypto-0.3.7-cp310-cp310-win_amd64.whl", hash = "sha256:a3b067a6bf8da5606e0b08f6128b8cb8c782041e7b2bf5b9cd91d9cfc90ae4d6"},
+    {file = "fast_stark_crypto-0.3.7-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:4242889afd8b27cafe81591fad890ad36851258d2e74a3475fbd22646040f241"},
+    {file = "fast_stark_crypto-0.3.7-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1137fa11cc6a85a10295a95c129c15e23e7b6c23e55be157abdb29208cd3971e"},
+    {file = "fast_stark_crypto-0.3.7-cp311-cp311-manylinux_2_24_aarch64.whl", hash = "sha256:c82d73356e6ebb90c4adf947da4e8e5c078f226cb3d3277fd6b017a873c1cb2d"},
+    {file = "fast_stark_crypto-0.3.7-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:83aa78b04d0925648e5157621272a1f1936547cd767b2d5162b0c6ba1b05126e"},
+    {file = "fast_stark_crypto-0.3.7-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:7994b9f972f9eaf77e353f6de10ef0dda4c76b2a4092392af40f8b43527ea12f"},
+    {file = "fast_stark_crypto-0.3.7-cp311-cp311-win_amd64.whl", hash = "sha256:3b95af5a0c1410fb9f03e534af71e97d04eada206e885d84d64eadbb73c84397"},
+    {file = "fast_stark_crypto-0.3.7-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:b1a36ab38b0fb507a09285dbc324dd9eb69b98078c08178b3e25a04189640afe"},
+    {file = "fast_stark_crypto-0.3.7-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:01aaa78571ae062e45fb9fa91de465333b66362e3bb7f72b87e23b4438ec13a0"},
+    {file = "fast_stark_crypto-0.3.7-cp312-cp312-manylinux_2_24_aarch64.whl", hash = "sha256:02595fc95788ec28c6a9f1d062e3fd5b3f7ce24755a2a59832dac475a5334e96"},
+    {file = "fast_stark_crypto-0.3.7-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:d55eee6b2144957ce5c0fe28979832b9d38c879272b7a864380fc0c44038b6ae"},
+    {file = "fast_stark_crypto-0.3.7-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:6035ac04e60b74c498fe0475e4dd91aa51a48376c3e29373299b07fa84efc43f"},
+    {file = "fast_stark_crypto-0.3.7-cp312-cp312-win_amd64.whl", hash = "sha256:0eb5185591b27873627456b53f80b36670a61728d99069710f27008ac84563e5"},
+    {file = "fast_stark_crypto-0.3.7-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:64e95bfa8ac5864466f55e4a8d4742eca6f048e1d45ba0a2d0141575cb97234b"},
+    {file = "fast_stark_crypto-0.3.7-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1e16eb65987c8f379488e38ac733f457bf7c44ff4cffad73f85b2e6f00aff3cf"},
+    {file = "fast_stark_crypto-0.3.7-cp313-cp313-manylinux_2_24_aarch64.whl", hash = "sha256:1f3959f65224717af48013be78f2d3d0ef9f9cf9c3ca10ef2370f9559b4b3c4f"},
+    {file = "fast_stark_crypto-0.3.7-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:22f12cd2e589c704ae0f9e04e83e11c28c432e1e8913807c3644663051eac16c"},
+    {file = "fast_stark_crypto-0.3.7-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:e7fa109daa5ac73376f2cf02ab393463193e9d86be2f4a46aa202aa71c5ca1f1"},
+    {file = "fast_stark_crypto-0.3.7-cp313-cp313-win_amd64.whl", hash = "sha256:10a6eed0a08a249b23ccd286fa1f3df6cab99db12653dfc987a56076c65dc9b0"},
+    {file = "fast_stark_crypto-0.3.7-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:54b2639fb5b1f9d4488790c233fbdc2bfc94e52db7163010db4d6ef2d5c935b3"},
+    {file = "fast_stark_crypto-0.3.7-cp39-cp39-manylinux_2_24_aarch64.whl", hash = "sha256:542ad01364aeb043d07cc2b7d7f57c7d87194507e3987e1449ae80446baa3865"},
+    {file = "fast_stark_crypto-0.3.7-cp39-cp39-musllinux_1_2_aarch64.whl", hash = "sha256:6125bda23bf653fe25617a2c502b80bceb347676492b92acd685aef0abe124ab"},
+    {file = "fast_stark_crypto-0.3.7-cp39-cp39-musllinux_1_2_x86_64.whl", hash = "sha256:12c4839cfd4de3b535074a140a9e7b47544d2621de42ade3d3d27bdab020981d"},
+    {file = "fast_stark_crypto-0.3.7-cp39-cp39-win_amd64.whl", hash = "sha256:70dff63007d5e67f88400cb16d0af8958c173077c527fc6ceb0d458bb3e76e5d"},
+    {file = "fast_stark_crypto-0.3.7.tar.gz", hash = "sha256:07e900163df299ce64f2919d44bfc028eb982538b3835f0d0779a8c932054723"},
 ]
 
 [[package]]
@@ -1441,14 +1435,14 @@ dev = ["coverage", "hypothesis", "hypothesmith (>=0.2)", "pre-commit", "pytest",
 
 [[package]]
 name = "freezegun"
-version = "1.4.0"
+version = "1.5.5"
 description = "Let your Python tests travel through time"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 groups = ["dev"]
 files = [
-    {file = "freezegun-1.4.0-py3-none-any.whl", hash = "sha256:55e0fc3c84ebf0a96a5aa23ff8b53d70246479e9a68863f1fcac5a3e52f19dd6"},
-    {file = "freezegun-1.4.0.tar.gz", hash = "sha256:10939b0ba0ff5adaecf3b06a5c2f73071d9678e507c5eaedb23c761d56ac774b"},
+    {file = "freezegun-1.5.5-py3-none-any.whl", hash = "sha256:cd557f4a75cf074e84bc374249b9dd491eaeacd61376b9eb3c423282211619d2"},
+    {file = "freezegun-1.5.5.tar.gz", hash = "sha256:ac7742a6cc6c25a2c35e9292dfd554b897b517d2dec26891a2e8debf205cb94a"},
 ]
 
 [package.dependencies]
@@ -3572,4 +3566,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "7e6dd0d067ccfb75e0bc021880037bc087b92ee0b914bdefc899435237e1c31d"
+content-hash = "5df16f4d4ebe5efb6140eb28c88372a3f6eeded6eb2f1bc435fdfd254ef4ca7e"

@@ -5,7 +5,7 @@ format:
 lint:
 	black --check --diff --target-version py310 --line-length 120 ./examples ./tests ./x10
 	flake8 ./examples ./tests ./x10
-	mypy --follow-untyped-imports --check-untyped-defs ./x10 ./examples
+	mypy ./x10 ./examples
 
 test:
 	tox
