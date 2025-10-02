@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [ starknet ]
-#    types: [ opened, reopened, synchronize, ready_for_review ]
+    types: [ opened, reopened, synchronize, ready_for_review ]
 
 jobs:
   code-checks:
-#    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false
     timeout-minutes: 10
     runs-on: ubuntu-latest
     strategy:
@@ -26,12 +26,6 @@ jobs:
           pip install --upgrade pip==25.0
           pip install poetry==1.8.3
           poetry config virtualenvs.create false
-
-#      - name: Update apt cache
-#        run: sudo apt-get update
-#
-#      - name: Install system packages
-#        run: sudo apt-get install -y build-essential libgmp-dev
 
       - name: Install deps
         run: poetry install --no-root
