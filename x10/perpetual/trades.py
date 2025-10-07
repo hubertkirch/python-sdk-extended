@@ -1,13 +1,13 @@
 from decimal import Decimal
-from enum import Enum
 
 from pydantic import AliasChoices, Field
+from strenum import StrEnum
 
 from x10.perpetual.orders import OrderSide
 from x10.utils.model import X10BaseModel
 
 
-class TradeType(Enum):
+class TradeType(StrEnum):
     TRADE = "TRADE"
     LIQUIDATION = "LIQUIDATION"
     DELEVERAGE = "DELEVERAGE"

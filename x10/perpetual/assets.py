@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from decimal import Context, Decimal
-from enum import Enum
 from typing import Optional
+
+from strenum import StrEnum
 
 from x10.utils.model import HexValue, X10BaseModel
 
@@ -37,7 +38,7 @@ class Asset:
         return int(internal * Decimal(self.l1_resolution))
 
 
-class AssetOperationType(str, Enum):
+class AssetOperationType(StrEnum):
     CLAIM = "CLAIM"
     DEPOSIT = "DEPOSIT"
     FAST_WITHDRAWAL = "FAST_WITHDRAWAL"
@@ -45,7 +46,7 @@ class AssetOperationType(str, Enum):
     TRANSFER = "TRANSFER"
 
 
-class AssetOperationStatus(Enum):
+class AssetOperationStatus(StrEnum):
     # Technical status
     UNKNOWN = "UNKNOWN"
 
