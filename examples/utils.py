@@ -13,13 +13,9 @@ def get_adjust_price_by_pct(config: TradingConfigModel):
 
 
 async def find_order_and_cancel(*, trading_client: PerpetualTradingClient, logger: Logger, order_id: str):
-    open_orders = await trading_client.account.get_open_orders()
+    open_order = await trading_client.account.get_order_by_id(order_id)
 
-    for order in open_orders.data:
-        if order.id == order_id:
-            logger.info("Found placed order: %s", order.to_pretty_json())
-            break
-
+    logger.info("Found placed order: %s", open_order.to_pretty_json())
     logger.info("Cancelling placed order...")
 
     await trading_client.orders.cancel_order(order_id)
