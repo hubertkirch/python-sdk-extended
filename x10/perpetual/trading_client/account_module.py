@@ -107,6 +107,24 @@ class AccountModule(BaseModule):
         )
         return await send_get_request(await self.get_session(), url, List[OpenOrderModel], api_key=self._get_api_key())
 
+    async def get_order_by_id(self, order_id: int) -> WrappedApiResponse[OpenOrderModel]:
+        """
+        https://api.docs.extended.exchange/#get-order-by-id
+        """
+
+        url = self._get_url("/user/orders/<order_id>", order_id=order_id)
+
+        return await send_get_request(await self.get_session(), url, OpenOrderModel, api_key=self._get_api_key())
+
+    async def get_order_by_external_id(self, external_id: str) -> WrappedApiResponse[list[OpenOrderModel]]:
+        """
+        https://api.docs.extended.exchange/#get-order-by-external-id
+        """
+
+        url = self._get_url("/user/orders/external/<external_id>", external_id=external_id)
+
+        return await send_get_request(await self.get_session(), url, list[OpenOrderModel], api_key=self._get_api_key())
+
     async def get_trades(
         self,
         market_names: List[str],
