@@ -9,10 +9,10 @@ from x10.perpetual.configuration import EndpointConfig
 from x10.perpetual.markets import MarketModel
 from x10.perpetual.order_object import create_order_object
 from x10.perpetual.orders import (
+    NewOrderModel,
     OpenOrderModel,
     OrderSide,
     OrderStatus,
-    PerpetualOrderModel,
     TimeInForce,
 )
 from x10.perpetual.stream_client.perpetual_stream_connection import (
@@ -208,7 +208,7 @@ class BlockingTradingClient:
         if not market:
             raise ValueError(f"Market '{market_name}' not found.")
 
-        order: PerpetualOrderModel = create_order_object(
+        order: NewOrderModel = create_order_object(
             account=self.__account,
             market=market,
             amount_of_synthetic=amount_of_synthetic,

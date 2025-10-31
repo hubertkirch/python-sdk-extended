@@ -131,7 +131,7 @@ class CreateOrderTpslTriggerModel(X10BaseModel):
     debugging_amounts: Optional[StarkDebuggingOrderAmountsModel] = None
 
 
-class PerpetualOrderModel(X10BaseModel):
+class NewOrderModel(X10BaseModel):
     id: str
     market: str
     type: OrderType
@@ -188,6 +188,7 @@ class OpenOrderModel(X10BaseModel):
     created_time: int
     updated_time: int
     expiry_time: Optional[int] = None
+    time_in_force: TimeInForce
     tp_sl_type: Optional[OrderTpslType] = None
     take_profit: Optional[OpenOrderTpslTriggerModel] = None
     stop_loss: Optional[OpenOrderTpslTriggerModel] = None

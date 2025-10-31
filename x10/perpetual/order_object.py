@@ -14,12 +14,12 @@ from x10.perpetual.order_object_settlement import (
 )
 from x10.perpetual.orders import (
     CreateOrderTpslTriggerModel,
+    NewOrderModel,
     OrderPriceType,
     OrderSide,
     OrderTpslType,
     OrderTriggerPriceType,
     OrderType,
-    PerpetualOrderModel,
     SelfTradeProtectionLevel,
     TimeInForce,
 )
@@ -55,7 +55,7 @@ def create_order_object(
     tp_sl_type: Optional[OrderTpslType] = None,
     take_profit: Optional[OrderTpslTriggerParam] = None,
     stop_loss: Optional[OrderTpslTriggerParam] = None,
-) -> PerpetualOrderModel:
+) -> NewOrderModel:
     """
     Creates an order object to be placed on the exchange using the `place_order` method.
     """
@@ -132,7 +132,16 @@ def __create_order_object(
     tp_sl_type: Optional[OrderTpslType] = None,
     take_profit: Optional[OrderTpslTriggerParam] = None,
     stop_loss: Optional[OrderTpslTriggerParam] = None,
-) -> PerpetualOrderModel:
+) -> NewOrderModel:
+    if side not in OrderSide:
+        raise ValueError(f"Unexpected order side value: {side}")
+
+    if time_in_force not in TimeInForce or time_in_force == TimeInForce.FOK:
+        raise ValueError(f"Unexpected time in force value: {time_in_force}")
+
+    if expire_time is None:
+        raise ValueError("`expire_time` must be provided")
+
     if exact_only:
         raise NotImplementedError("`exact_only` option is not supported yet")
 
@@ -143,9 +152,6 @@ def __create_order_object(
         stop_loss and stop_loss.price_type == OrderPriceType.MARKET
     ):
         raise NotImplementedError("TPSL `MARKET` price type is not supported yet")
-
-    if expire_time is None:
-        raise ValueError("`expire_time` must be provided")
 
     if nonce is None:
         nonce = generate_nonce()
@@ -194,7 +200,7 @@ def __create_order_object(
     )
 
     order_id = str(settlement_data.order_hash) if order_external_id is None else order_external_id
-    order = PerpetualOrderModel(
+    order = NewOrderModel(
         id=order_id,
         market=market.name,
         type=OrderType.LIMIT,
