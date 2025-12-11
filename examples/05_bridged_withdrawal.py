@@ -24,14 +24,17 @@ async def run_example():
     )
     trading_client = PerpetualTradingClient(ENDPOINT_CONFIG, stark_account)
     LOGGER.info("Getting quote")
-    quote = (await trading_client.account.get_bridge_quote(chain_in="STRK", chain_out=target_chain, amount=amount)).data.id
+    quote = (await trading_client.account.get_bridge_quote(chain_in="STRK", chain_out=target_chain, amount=amount)).data
+    if quote.fee > Decimal(2):
+        LOGGER.info("Fee %s is too high", quote.fee)
+        return
     LOGGER.info("Commiting quote")
-    await trading_client.account.commit_bridge_quote(quote)
+    await trading_client.account.commit_bridge_quote(quote.id)
     LOGGER.info("Requesting withdrawal")
     withdrawal_id = (await trading_client.account.withdraw(
         amount=Decimal(amount),
         chain_id=target_chain,
-        quote_id=quote,
+        quote_id=quote.id,
     )).data
 
     LOGGER.info("Withdrawal %s requested", withdrawal_id)
