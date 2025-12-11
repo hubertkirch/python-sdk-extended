@@ -10,6 +10,7 @@ from x10.perpetual.trading_client import PerpetualTradingClient
 LOGGER = logging.getLogger()
 ENDPOINT_CONFIG = MAINNET_CONFIG
 
+
 # Bridged withdrawal example. Bridge disabled on sepolia, example works only on mainnet
 async def run_example():
     env_config = init_env()
@@ -31,11 +32,13 @@ async def run_example():
     LOGGER.info("Commiting quote")
     await trading_client.account.commit_bridge_quote(quote.id)
     LOGGER.info("Requesting withdrawal")
-    withdrawal_id = (await trading_client.account.withdraw(
-        amount=Decimal(amount),
-        chain_id=target_chain,
-        quote_id=quote.id,
-    )).data
+    withdrawal_id = (
+        await trading_client.account.withdraw(
+            amount=Decimal(amount),
+            chain_id=target_chain,
+            quote_id=quote.id,
+        )
+    ).data
 
     LOGGER.info("Withdrawal %s requested", withdrawal_id)
 
