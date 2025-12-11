@@ -3,13 +3,11 @@ from asyncio import run
 from decimal import Decimal
 
 from examples.init_env import init_env
-from x10.config import ETH_USD_MARKET
 from x10.perpetual.accounts import StarkPerpetualAccount
 from x10.perpetual.configuration import MAINNET_CONFIG
 from x10.perpetual.trading_client import PerpetualTradingClient
 
 LOGGER = logging.getLogger()
-MARKET_NAME = ETH_USD_MARKET
 ENDPOINT_CONFIG = MAINNET_CONFIG
 
 # Bridged withdrawal example. Bridge disabled on sepolia, example works only on mainnet
