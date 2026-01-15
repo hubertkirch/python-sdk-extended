@@ -127,7 +127,7 @@ class InfoAPI(BaseSyncAPI):
 
     def user_fills(
         self,
-        coin: str,
+        coin: Optional[str] = None,
         address: Optional[str] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
@@ -136,16 +136,15 @@ class InfoAPI(BaseSyncAPI):
         Get user's trade fills.
 
         Args:
-            coin: Market name (REQUIRED - Extended API requires market)
+            coin: Market name (optional - if None, returns fills for all markets)
             address: Ignored (uses authenticated user)
             start_time: Optional start timestamp (ms)
             end_time: Optional end timestamp (ms)
 
         Returns:
-            List of fills in Hyperliquid format
+            List of fills in Hyperliquid format (up to 1000 most recent)
 
         Note:
-            Unlike Hyperliquid, Extended requires specifying the market.
             The `cloid` field will be null in responses.
         """
         return run_sync(self._async.user_fills(coin, address, start_time, end_time))

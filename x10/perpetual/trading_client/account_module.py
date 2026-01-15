@@ -127,7 +127,7 @@ class AccountModule(BaseModule):
 
     async def get_trades(
         self,
-        market_names: List[str],
+        market_names: Optional[List[str]] = None,
         trade_side: Optional[OrderSide] = None,
         trade_type: Optional[TradeType] = None,
         cursor: Optional[int] = None,
@@ -139,7 +139,7 @@ class AccountModule(BaseModule):
 
         url = self._get_url(
             "/user/trades",
-            query={"market": market_names, "side": trade_side, "type": trade_type, "cursor": cursor, "limit": limit},
+            query={"market": market_names or [], "side": trade_side, "type": trade_type, "cursor": cursor, "limit": limit},
         )
 
         return await send_get_request(

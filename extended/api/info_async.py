@@ -214,7 +214,7 @@ class AsyncInfoAPI(BaseAsyncAPI):
 
     async def user_fills(
         self,
-        coin: str,
+        coin: Optional[str] = None,
         address: Optional[str] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
@@ -223,16 +223,15 @@ class AsyncInfoAPI(BaseAsyncAPI):
         Get user's trade fills.
 
         Args:
-            coin: Market name (REQUIRED - Extended API requires market)
+            coin: Market name (optional - if None, returns fills for all markets)
             address: Ignored (uses authenticated user)
-            start_time: Optional start timestamp (ms) - not directly supported
-            end_time: Optional end timestamp (ms) - not directly supported
+            start_time: Optional start timestamp (ms)
+            end_time: Optional end timestamp (ms)
 
         Returns:
-            List of fills in Hyperliquid format
+            List of fills in Hyperliquid format (up to 1000 most recent)
 
         Note:
-            Unlike Hyperliquid, Extended requires specifying the market.
             The `cloid` field will be null in responses (not available from trades endpoint).
         """
         if address is not None and address != self._auth.address:
@@ -242,9 +241,9 @@ class AsyncInfoAPI(BaseAsyncAPI):
                 UserWarning,
             )
 
-        market_name = normalize_market_name(coin)
+        market_names = [normalize_market_name(coin)] if coin else None
         response = await self._client.account.get_trades(
-            market_names=[market_name],
+            market_names=market_names,
         )
 
         # Filter by time if provided

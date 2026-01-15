@@ -48,9 +48,11 @@ class OrderTransformer:
         filled_qty = order.filled_qty if order.filled_qty else Decimal(0)
         remaining_sz = order.qty - filled_qty
 
+        # Handle both enum and string types for side
+        side_value = order.side.value if hasattr(order.side, 'value') else order.side
         return {
             "coin": to_hyperliquid_market_name(order.market),
-            "side": SIDE_TO_HL.get(order.side.value, "B"),
+            "side": SIDE_TO_HL.get(side_value, "B"),
             "limitPx": str(order.price),
             "sz": str(remaining_sz),
             "oid": order.id,
@@ -89,11 +91,14 @@ class OrderTransformer:
         Returns:
             Dict in Hyperliquid fill format
         """
+        # Handle both enum and string types for side and trade_type
+        side_value = trade.side.value if hasattr(trade.side, 'value') else trade.side
+        trade_type_value = trade.trade_type.value if hasattr(trade.trade_type, 'value') else trade.trade_type
         return {
             "coin": to_hyperliquid_market_name(trade.market),
             "px": str(trade.price),
             "sz": str(trade.qty),
-            "side": SIDE_TO_HL.get(trade.side.value, "B"),
+            "side": SIDE_TO_HL.get(side_value, "B"),
             "time": trade.created_time,
             "startPosition": "0",  # Not available from Extended
             "dir": "Trade",  # Can't determine Open/Close from Extended trades
@@ -103,7 +108,7 @@ class OrderTransformer:
             "crossed": trade.is_taker,
             "fee": str(trade.fee),
             "tid": trade.id,
-            "liquidation": trade.trade_type.value == "LIQUIDATION",
+            "liquidation": trade_type_value == "LIQUIDATION",
             "cloid": None,  # Not available from Extended trades endpoint
         }
 

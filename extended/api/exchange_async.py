@@ -317,25 +317,29 @@ class AsyncExchangeAPI(BaseAsyncAPI):
             slippage: Max slippage (e.g., 0.05 for 5%)
 
         Returns:
-            Calculated limit price
+            Calculated limit price (rounded to market precision)
         """
+        from decimal import ROUND_CEILING, ROUND_FLOOR
+
         market_name = normalize_market_name(name)
 
-        # Get orderbook and market stats in parallel
+        # Get orderbook, market stats, and market config in parallel
         orderbook_task = self._client.markets_info.get_orderbook_snapshot(
             market_name=market_name
         )
         stats_task = self._client.markets_info.get_market_statistics(
             market_name=market_name
         )
+        markets_task = self._client.markets_info.get_markets_dict()
 
-        orderbook_response, stats_response = await asyncio.gather(
-            orderbook_task, stats_task
+        orderbook_response, stats_response, markets_dict = await asyncio.gather(
+            orderbook_task, stats_task, markets_task
         )
 
         orderbook = orderbook_response.data
         stats = stats_response.data
         mark_price = stats.mark_price
+        market = markets_dict[market_name]
 
         if is_buy:
             # Use best ask with slippage, capped at mark * 1.05
@@ -346,7 +350,9 @@ class AsyncExchangeAPI(BaseAsyncAPI):
             )
             target_price = best_ask * Decimal(1 + slippage)
             max_price = mark_price * Decimal(str(MARKET_ORDER_PRICE_CAP))
-            return min(target_price, max_price)
+            price = min(target_price, max_price)
+            # Round up for buys to ensure fill
+            return market.trading_config.round_price(price, ROUND_CEILING)
         else:
             # Use best bid with slippage, floored at mark * 0.95
             best_bid = (
@@ -356,7 +362,9 @@ class AsyncExchangeAPI(BaseAsyncAPI):
             )
             target_price = best_bid * Decimal(1 - slippage)
             min_price = mark_price * Decimal(str(MARKET_ORDER_PRICE_FLOOR))
-            return max(target_price, min_price)
+            price = max(target_price, min_price)
+            # Round down for sells to ensure fill
+            return market.trading_config.round_price(price, ROUND_FLOOR)
 
     async def market_open(
         self,
@@ -444,8 +452,9 @@ class AsyncExchangeAPI(BaseAsyncAPI):
         # Determine size to close
         close_sz = float(sz) if sz is not None else float(position.size)
 
-        # Close is opposite side
-        is_buy = position.side.value == "SHORT"
+        # Close is opposite side (side can be str or PositionSide enum)
+        side = position.side.value if hasattr(position.side, 'value') else position.side
+        is_buy = side == "SHORT"
 
         if px is not None:
             limit_price = Decimal(str(px))

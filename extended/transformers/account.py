@@ -73,7 +73,9 @@ class AccountTransformer:
         """
         # Signed size: positive for LONG, negative for SHORT
         size = position.size
-        szi = str(size) if position.side.value == "LONG" else str(-size)
+        # Handle both enum and string types for side
+        side_value = position.side.value if hasattr(position.side, 'value') else position.side
+        szi = str(size) if side_value == "LONG" else str(-size)
 
         leverage = int(position.leverage)
         margin_used = position.value / leverage if leverage > 0 else Decimal(0)
