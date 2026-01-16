@@ -3,6 +3,7 @@ Helper utilities for Extended Exchange SDK.
 """
 
 import asyncio
+import concurrent.futures
 from decimal import Decimal
 from functools import wraps
 from typing import Any, Callable, Coroutine, Dict, Optional, Tuple, TypeVar
@@ -53,31 +54,39 @@ def run_sync(coro: Coroutine[Any, Any, T]) -> T:
 
     Handles both cases:
     - When called from a thread without an event loop
-    - When called from a thread with an existing event loop (raises error)
+    - When called from a thread with an existing event loop (uses thread pool)
 
     Args:
         coro: The coroutine to run
 
     Returns:
         The result of the coroutine
-
-    Raises:
-        RuntimeError: If called from within an async context
     """
     try:
-        loop = asyncio.get_running_loop()
-        # If we're already in an async context, we can't use run_sync
-        raise RuntimeError(
-            "Cannot use sync client from within async context. "
-            "Use AsyncClient instead."
-        )
-    except RuntimeError as e:
-        # Check if it's our error or "no running event loop"
-        if "Cannot use sync client" in str(e):
-            raise
-        # No running loop, safe to create one
+        asyncio.get_running_loop()
+        # We're in an async context (e.g., Celery, FastAPI, etc.)
+        # Run the coroutine in a separate thread to escape the async context
+
+        def run_in_new_loop() -> T:
+            """Run coroutine in a new event loop in this thread."""
+            new_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(new_loop)
+            try:
+                return new_loop.run_until_complete(coro)
+            finally:
+                new_loop.close()
+                asyncio.set_event_loop(None)
+
+        # Use thread pool to run in a clean thread without event loop
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(run_in_new_loop)
+            return future.result(timeout=30)  # 30 second timeout for API calls
+
+    except RuntimeError:
+        # No running loop, safe to run normally
         pass
 
+    # Standard case: no existing event loop
     try:
         loop = asyncio.get_event_loop()
         if loop.is_closed():
