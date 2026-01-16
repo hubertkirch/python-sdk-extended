@@ -118,7 +118,7 @@ class AsyncExchangeAPI(BaseAsyncAPI):
 
         Args:
             order_requests: List of order dicts with keys:
-                - name, is_buy, sz, limit_px, order_type, reduce_only, cloid
+                - coin, is_buy, sz, limit_px, order_type, reduce_only, cloid
             builder: Builder info applied to all orders
             grouping: Ignored (no native support)
 
@@ -128,7 +128,7 @@ class AsyncExchangeAPI(BaseAsyncAPI):
         async def place_single(request: Dict[str, Any]) -> Dict[str, Any]:
             try:
                 result = await self.order(
-                    name=request["name"],
+                    name=request["coin"],
                     is_buy=request["is_buy"],
                     sz=request["sz"],
                     limit_px=request["limit_px"],

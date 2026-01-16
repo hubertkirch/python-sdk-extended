@@ -94,7 +94,7 @@ class ExchangeAPI(BaseSyncAPI):
 
         Args:
             order_requests: List of order dicts with keys:
-                - name, is_buy, sz, limit_px, order_type, reduce_only, cloid
+                - coin, is_buy, sz, limit_px, order_type, reduce_only, cloid
             builder: Builder info applied to all orders
             grouping: Ignored (no native support)
 
