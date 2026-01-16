@@ -3,14 +3,19 @@ Helper utilities for Extended Exchange SDK.
 """
 
 import asyncio
-import concurrent.futures
 from decimal import Decimal
 from functools import wraps
 from typing import Any, Callable, Coroutine, Dict, Optional, Tuple, TypeVar
 
+import nest_asyncio
+
 from x10.perpetual.orders import TimeInForce as X10TimeInForce
 
 from extended.utils.constants import TIF_MAPPING
+
+# Apply nest_asyncio to allow nested event loops
+# This enables run_sync() to work even within async contexts (e.g., Celery workers)
+nest_asyncio.apply()
 
 T = TypeVar("T")
 
@@ -52,9 +57,13 @@ def run_sync(coro: Coroutine[Any, Any, T]) -> T:
     """
     Run an async coroutine synchronously.
 
-    Handles both cases:
-    - When called from a thread without an event loop: uses asyncio.run()
-    - When called from within an async context: runs in a separate thread
+    Works in all contexts including:
+    - Regular sync code
+    - Within async contexts (Celery workers, FastAPI, etc.)
+    - From ThreadPoolExecutor threads
+    - Nested calls
+
+    Uses nest_asyncio to allow nested event loops.
 
     Args:
         coro: The coroutine to run
@@ -63,14 +72,12 @@ def run_sync(coro: Coroutine[Any, Any, T]) -> T:
         The result of the coroutine
     """
     try:
-        asyncio.get_running_loop()
-        # We're in an async context - run in a separate thread
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(asyncio.run, coro)
-            return future.result(timeout=30)
+        loop = asyncio.get_event_loop()
     except RuntimeError:
-        # No running loop - use asyncio.run() directly
-        return asyncio.run(coro)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    return loop.run_until_complete(coro)
 
 
 def sync_wrapper(
