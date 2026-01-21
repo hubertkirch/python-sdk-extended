@@ -3,6 +3,7 @@ Helper utilities for Extended Exchange SDK.
 """
 
 import asyncio
+import threading
 from decimal import Decimal
 from functools import wraps
 from typing import Any, Callable, Coroutine, Dict, Optional, Tuple, TypeVar
@@ -13,11 +14,10 @@ from x10.perpetual.orders import TimeInForce as X10TimeInForce
 
 from extended.utils.constants import TIF_MAPPING
 
-# Apply nest_asyncio to allow nested event loops
-# This enables run_sync() to work even within async contexts (e.g., Celery workers)
-nest_asyncio.apply()
-
 T = TypeVar("T")
+
+# Thread-local storage for event loops
+_thread_local = threading.local()
 
 
 def normalize_market_name(name: str) -> str:
@@ -55,15 +55,17 @@ def to_hyperliquid_market_name(name: str) -> str:
 
 def run_sync(coro: Coroutine[Any, Any, T]) -> T:
     """
-    Run an async coroutine synchronously.
+    Run an async coroutine synchronously with thread safety.
 
     Works in all contexts including:
     - Regular sync code
     - Within async contexts (Celery workers, FastAPI, etc.)
     - From ThreadPoolExecutor threads
     - Nested calls
+    - Multiple concurrent threads
 
-    Uses nest_asyncio to allow nested event loops.
+    Uses nest_asyncio to allow nested event loops and thread-local
+    storage to prevent "Future attached to different loop" errors.
 
     Args:
         coro: The coroutine to run
@@ -71,11 +73,37 @@ def run_sync(coro: Coroutine[Any, Any, T]) -> T:
     Returns:
         The result of the coroutine
     """
+    # Check for running loop first (async context)
     try:
-        loop = asyncio.get_event_loop()
+        running_loop = asyncio.get_running_loop()
+        # We're inside an async context - use nest_asyncio
+        # nest_asyncio patches run_until_complete to work in this case
+        nest_asyncio.apply(running_loop)
+        return running_loop.run_until_complete(coro)
     except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # No running loop - expected case for sync contexts
+        pass
+
+    is_main_thread = threading.current_thread() is threading.main_thread()
+
+    if not is_main_thread:
+        # Worker thread: use thread-local event loop
+        loop = getattr(_thread_local, "loop", None)
+        if loop is None or loop.is_closed():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            nest_asyncio.apply(loop)
+            _thread_local.loop = loop
+    else:
+        # Main thread: use standard approach
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_closed():
+                raise RuntimeError("closed")
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        nest_asyncio.apply(loop)
 
     return loop.run_until_complete(coro)
 
