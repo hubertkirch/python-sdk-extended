@@ -2,15 +2,15 @@
 Native Sync Client for Extended Exchange SDK.
 
 Main entry point matching Hyperliquid/Pacifica Client class.
-Uses native sync implementation instead of wrapper approach.
+REPLACES problematic run_sync() approach with native sync implementation.
 """
 
 from typing import Optional
 
-from extended.api.exchange import ExchangeAPI
-from extended.api.info import InfoAPI
-from extended.auth_sync import SimpleSyncAuth
-from extended.config_sync import SimpleSyncConfig, MAINNET_CONFIG, TESTNET_CONFIG
+from extended.api.exchange_new_sync import ExchangeAPI
+from extended.api.info_new_sync import InfoAPI
+from extended.auth import ExtendedAuth
+from extended.config import MAINNET_CONFIG, TESTNET_CONFIG
 
 
 class Client:
@@ -18,7 +18,7 @@ class Client:
     Extended Exchange client with Hyperliquid-compatible interface.
 
     Provides synchronous access to Info and Exchange APIs using NATIVE SYNC implementation.
-    Pure synchronous operation throughout.
+    NO async/await or run_sync() anywhere - pure synchronous operation.
 
     Usage:
         client = Client(
@@ -68,7 +68,7 @@ class Client:
             Credentials must be obtained from your onboarding infrastructure.
             This SDK does not perform onboarding.
         """
-        self._auth = SimpleSyncAuth(
+        self._auth = ExtendedAuth(
             api_key=api_key,
             vault=vault,
             stark_private_key=stark_private_key,
@@ -80,11 +80,12 @@ class Client:
         self._config = TESTNET_CONFIG if testnet else MAINNET_CONFIG
         if base_url:
             # Create custom config with provided base_url
-            self._config = SimpleSyncConfig(api_base_url=base_url)
+            from x10.perpetual.configuration import EndpointConfig
+            self._config = EndpointConfig(api_base_url=base_url)
 
         self._timeout = timeout
 
-        # Create NATIVE SYNC APIs - pure sync implementation
+        # Create NATIVE SYNC APIs - NO run_sync() wrapper
         self._info = InfoAPI(self._auth, self._config)
         self._exchange = ExchangeAPI(self._auth, self._config)
 

@@ -53,21 +53,20 @@ Key Differences from Hyperliquid:
 
 __version__ = "0.1.0"
 
-# Main clients
+# Main clients - NATIVE SYNC ONLY
 from extended.client import Client
-from extended.async_client import AsyncClient
 
-# Setup functions (Hyperliquid-style)
-from extended.setup import setup, async_setup
+# Setup function (Hyperliquid-style) - NATIVE SYNC ONLY
+from extended.setup import setup
 
-# API classes (for type hints)
-from extended.api import InfoAPI, AsyncInfoAPI, ExchangeAPI, AsyncExchangeAPI
+# API classes (for type hints) - NATIVE SYNC ONLY
+from extended.api import InfoAPI, ExchangeAPI
 
 # Configuration
-from extended.config import TESTNET_CONFIG, MAINNET_CONFIG, EndpointConfig
+from extended.config_sync import TESTNET_CONFIG, MAINNET_CONFIG, SimpleSyncConfig as EndpointConfig
 
 # Exceptions
-from extended.exceptions import (
+from extended.exceptions_sync import (
     ExtendedError,
     ExtendedAPIError,
     ExtendedAuthError,
@@ -76,28 +75,27 @@ from extended.exceptions import (
     ExtendedNotFoundError,
 )
 
-# Types
-from extended.types import (
-    Side,
-    TimeInForce,
-    OrderTypeSpec,
-    BuilderInfo,
-)
+# Simple types to avoid dependencies
+class Side:
+    BUY = "BUY"
+    SELL = "SELL"
+
+class TimeInForce:
+    GTC = "GTC"
+    IOC = "IOC"
+    ALO = "ALO"
+
+OrderTypeSpec = dict
+BuilderInfo = dict
 
 __all__ = [
     # Version
     "__version__",
-    # Main clients
+    # Main clients - NATIVE SYNC ONLY
     "Client",
-    "AsyncClient",
-    # Setup functions (Hyperliquid-style)
-    "setup",
-    "async_setup",
-    # API classes
+    # API classes - NATIVE SYNC ONLY
     "InfoAPI",
-    "AsyncInfoAPI",
     "ExchangeAPI",
-    "AsyncExchangeAPI",
     # Config
     "TESTNET_CONFIG",
     "MAINNET_CONFIG",
