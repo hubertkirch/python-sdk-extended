@@ -2,15 +2,14 @@
 Base sync API class for Extended Exchange SDK.
 
 Provides common functionality for sync API classes using native sync implementation.
-REPLACES the problematic run_sync() wrapper approach.
+Uses native sync implementation instead of wrapper approach.
 """
 
 from typing import Any, TypeVar
 
-from x10.perpetual.configuration import EndpointConfig
-
 from extended.api.base_native_sync import BaseNativeSyncClient
-from extended.auth import ExtendedAuth
+from extended.auth_sync import SimpleSyncAuth
+from extended.config_sync import SimpleSyncConfig
 
 T = TypeVar("T")
 
@@ -23,13 +22,13 @@ class BaseSyncAPI(BaseNativeSyncClient):
     MIRRORS Pacifica's BaseAPIClient approach exactly.
     """
 
-    def __init__(self, auth: ExtendedAuth, config: EndpointConfig):
+    def __init__(self, auth: SimpleSyncAuth, config: SimpleSyncConfig):
         """
         Initialize the base API.
 
         Args:
-            auth: ExtendedAuth instance with credentials
-            config: Endpoint configuration
+            auth: SimpleSyncAuth instance with credentials
+            config: SimpleSyncConfig configuration
         """
         # Use native sync client directly
         super().__init__(auth, config)

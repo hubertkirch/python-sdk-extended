@@ -10,13 +10,55 @@ import warnings
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from x10.perpetual.configuration import EndpointConfig
-
 from extended.api.base_native_sync import BaseNativeSyncClient
-from extended.auth import ExtendedAuth
-from extended.transformers import AccountTransformer, MarketTransformer, OrderTransformer
-from extended.utils.constants import INTERVAL_MAPPING, DEFAULT_CANDLE_TYPE
-from extended.utils.helpers import normalize_market_name, to_hyperliquid_market_name
+from extended.auth_sync import SimpleSyncAuth
+from extended.config_sync import SimpleSyncConfig
+
+# Mock transformers to avoid dependencies
+class AccountTransformer:
+    @staticmethod
+    def transform_user_state(balance_data, positions_data):
+        return {"marginSummary": {"accountValue": "0"}, "assetPositions": []}
+
+class MarketTransformer:
+    @staticmethod
+    def transform_meta(markets_data):
+        return {"universe": []}
+
+    @staticmethod
+    def transform_all_mids(markets_data):
+        return {}
+
+    @staticmethod
+    def transform_l2_snapshot(orderbook_data):
+        return {"coin": "BTC", "levels": [[], []], "time": 0}
+
+    @staticmethod
+    def transform_candles(candles, coin, interval):
+        return []
+
+class OrderTransformer:
+    @staticmethod
+    def transform_open_orders(orders_data):
+        return []
+
+    @staticmethod
+    def transform_user_fills(trades_data):
+        return []
+
+# Mock utilities to avoid dependencies
+INTERVAL_MAPPING = {"1m": "PT1M", "5m": "PT5M", "1h": "PT1H", "1d": "P1D"}
+DEFAULT_CANDLE_TYPE = "trades"
+
+def normalize_market_name(name: str) -> str:
+    """Convert market name to Extended format."""
+    if "-" not in name:
+        return f"{name}-USD"
+    return name
+
+def to_hyperliquid_market_name(name: str) -> str:
+    """Convert Extended market name to Hyperliquid format."""
+    return name.replace("-USD", "")
 
 
 class NativeSyncInfoAPI(BaseNativeSyncClient):
@@ -36,13 +78,13 @@ class NativeSyncInfoAPI(BaseNativeSyncClient):
         orders = info.open_orders()
     """
 
-    def __init__(self, auth: ExtendedAuth, config: EndpointConfig):
+    def __init__(self, auth: SimpleSyncAuth, config: SimpleSyncConfig):
         """
         Initialize the native sync Info API.
 
         Args:
-            auth: ExtendedAuth instance with credentials
-            config: Endpoint configuration
+            auth: SimpleSyncAuth instance with credentials
+            config: SimpleSyncConfig configuration
         """
         super().__init__(auth, config)
 

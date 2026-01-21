@@ -28,7 +28,7 @@ def setup(
     pattern, returning a tuple of (address, info, exchange) for easy integration
     with existing trading engines.
 
-    NATIVE SYNC IMPLEMENTATION - no async/await dependencies.
+    NATIVE SYNC IMPLEMENTATION - pure synchronous.
 
     Args:
         api_key: Extended Exchange API key
@@ -56,8 +56,8 @@ def setup(
         )
 
         # Now use exactly like Hyperliquid/Pacifica - NATIVE SYNC
-        state = info.user_state()  # No await needed
-        exchange.order("BTC", is_buy=True, sz=0.01, limit_px=50000)  # No await needed
+        state = info.user_state()  # Pure sync - no waiting needed
+        exchange.order("BTC", is_buy=True, sz=0.01, limit_px=50000)  # Pure sync
 
     Note:
         Credentials (api_key, vault, stark keys) must be obtained from your

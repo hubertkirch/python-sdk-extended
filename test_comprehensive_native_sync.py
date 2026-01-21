@@ -134,8 +134,8 @@ def test_client_instantiation_mocked():
 
     try:
         # Mock all problematic imports
-        with patch('extended.auth.ExtendedAuth') as mock_auth_class:
-            with patch('extended.config.MAINNET_CONFIG') as mock_config:
+        with patch('extended.auth_sync.SimpleSyncAuth') as mock_auth_class:
+            with patch('extended.config_sync.MAINNET_CONFIG') as mock_config:
                 # Setup mocks
                 mock_auth = Mock()
                 mock_auth.address = "0x123456789"
@@ -227,8 +227,8 @@ def test_threadpool_compatibility():
         """Task to run in ThreadPoolExecutor."""
         try:
             # Mock the problematic dependencies
-            with patch('extended.api.base_native_sync.ExtendedAuth') as mock_auth_class:
-                with patch('extended.api.base_native_sync.EndpointConfig') as mock_config_class:
+            with patch('extended.api.base_native_sync.SimpleSyncAuth') as mock_auth_class:
+                with patch('extended.api.base_native_sync.SimpleSyncConfig') as mock_config_class:
                     # Setup mocks
                     mock_auth = Mock()
                     mock_auth.api_key = f"test_key_{worker_id}"

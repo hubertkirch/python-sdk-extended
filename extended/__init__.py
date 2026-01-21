@@ -60,10 +60,10 @@ from extended.client import Client
 from extended.api import InfoAPI, ExchangeAPI
 
 # Configuration
-from extended.config import TESTNET_CONFIG, MAINNET_CONFIG, EndpointConfig
+from extended.config_sync import TESTNET_CONFIG, MAINNET_CONFIG, SimpleSyncConfig as EndpointConfig
 
 # Exceptions
-from extended.exceptions import (
+from extended.exceptions_sync import (
     ExtendedError,
     ExtendedAPIError,
     ExtendedAuthError,
@@ -72,13 +72,18 @@ from extended.exceptions import (
     ExtendedNotFoundError,
 )
 
-# Types
-from extended.types import (
-    Side,
-    TimeInForce,
-    OrderTypeSpec,
-    BuilderInfo,
-)
+# Simple types to avoid dependencies
+class Side:
+    BUY = "BUY"
+    SELL = "SELL"
+
+class TimeInForce:
+    GTC = "GTC"
+    IOC = "IOC"
+    ALO = "ALO"
+
+OrderTypeSpec = dict
+BuilderInfo = dict
 
 __all__ = [
     # Version

@@ -2,7 +2,7 @@
 Base native sync API client for Extended Exchange SDK.
 
 MIRRORS Pacifica's BaseAPIClient architecture exactly.
-Uses requests.Session() instead of aiohttp for native synchronous operation.
+Uses requests.Session() for native synchronous operation.
 """
 
 import requests
@@ -11,9 +11,16 @@ import logging
 from typing import Dict, Optional, Any, List
 from urllib.parse import urljoin
 
-from x10.perpetual.configuration import EndpointConfig
-from extended.auth import ExtendedAuth
-from extended.exceptions import ExtendedAPIError
+from extended.auth_sync import SimpleSyncAuth
+from extended.config_sync import SimpleSyncConfig
+
+# Simple exception class to avoid async dependencies
+class ExtendedAPIError(Exception):
+    def __init__(self, status_code: int, message: str, data=None):
+        self.status_code = status_code
+        self.message = message
+        self.data = data
+        super().__init__(message)
 
 logger = logging.getLogger(__name__)
 
@@ -28,16 +35,16 @@ class BaseNativeSyncClient:
 
     def __init__(
         self,
-        auth: Optional[ExtendedAuth] = None,
-        config: Optional[EndpointConfig] = None,
+        auth: Optional[SimpleSyncAuth] = None,
+        config: Optional[SimpleSyncConfig] = None,
         timeout: int = 30
     ):
         """
         Initialize base API client.
 
         Args:
-            auth: ExtendedAuth instance with credentials
-            config: Endpoint configuration
+            auth: SimpleSyncAuth instance with credentials
+            config: SimpleSyncConfig configuration
             timeout: Request timeout in seconds
         """
         self.auth = auth
