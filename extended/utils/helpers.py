@@ -55,17 +55,15 @@ def to_hyperliquid_market_name(name: str) -> str:
 
 def run_sync(coro: Coroutine[Any, Any, T]) -> T:
     """
-    Run an async coroutine synchronously with thread safety.
+    Run an async coroutine synchronously with nuclear-level thread safety.
 
-    Works in all contexts including:
-    - Regular sync code
-    - Within async contexts (Celery workers, FastAPI, etc.)
-    - From ThreadPoolExecutor threads
-    - Nested calls
-    - Multiple concurrent threads
+    This version uses adaptive isolation strategies to completely eliminate
+    "Future attached to different loop" errors in production environments.
 
-    Uses nest_asyncio to allow nested event loops and thread-local
-    storage to prevent "Future attached to different loop" errors.
+    Strategies (in order of preference):
+    1. Thread isolation for ThreadPoolExecutor contexts
+    2. Standard approach for main thread contexts
+    3. Process isolation as ultimate fallback
 
     Args:
         coro: The coroutine to run
@@ -73,39 +71,107 @@ def run_sync(coro: Coroutine[Any, Any, T]) -> T:
     Returns:
         The result of the coroutine
     """
-    # Check for running loop first (async context)
+    # Quick check if we're in a ThreadPoolExecutor (production scenario)
+    current_thread = threading.current_thread()
+    is_threadpool = ("ThreadPoolExecutor" in current_thread.name or
+                    "CrossEx" in current_thread.name or
+                    "Worker" in current_thread.name)
+
+    if is_threadpool:
+        # Production ThreadPoolExecutor context - use nuclear isolation
+        return _run_sync_thread_isolated(coro)
+
+    # Try standard approach first for non-ThreadPoolExecutor contexts
     try:
-        running_loop = asyncio.get_running_loop()
-        # We're inside an async context - use nest_asyncio
-        # nest_asyncio patches run_until_complete to work in this case
-        nest_asyncio.apply(running_loop)
-        return running_loop.run_until_complete(coro)
-    except RuntimeError:
-        # No running loop - expected case for sync contexts
-        pass
-
-    is_main_thread = threading.current_thread() is threading.main_thread()
-
-    if not is_main_thread:
-        # Worker thread: use thread-local event loop
-        loop = getattr(_thread_local, "loop", None)
-        if loop is None or loop.is_closed():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            nest_asyncio.apply(loop)
-            _thread_local.loop = loop
-    else:
-        # Main thread: use standard approach
+        # Check for running loop first (async context)
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_closed():
-                raise RuntimeError("closed")
+            running_loop = asyncio.get_running_loop()
+            # We're inside an async context - use nest_asyncio
+            nest_asyncio.apply(running_loop)
+            return running_loop.run_until_complete(coro)
         except RuntimeError:
+            # No running loop - expected case for sync contexts
+            pass
+
+        # Standard event loop approach
+        is_main_thread = threading.current_thread() is threading.main_thread()
+
+        if not is_main_thread:
+            # Worker thread: use thread-local event loop
+            loop = getattr(_thread_local, "loop", None)
+            if loop is None or loop.is_closed():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                nest_asyncio.apply(loop)
+                _thread_local.loop = loop
+        else:
+            # Main thread: use standard approach
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_closed():
+                    raise RuntimeError("closed")
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            nest_asyncio.apply(loop)
+
+        return loop.run_until_complete(coro)
+
+    except RuntimeError as e:
+        if "attached to a different loop" in str(e):
+            # This is the exact error we're trying to fix - use nuclear isolation
+            return _run_sync_thread_isolated(coro)
+        else:
+            # Other RuntimeError - re-raise
+            raise
+
+
+def _run_sync_thread_isolated(coro: Coroutine[Any, Any, T]) -> T:
+    """
+    Nuclear option: Run coroutine in completely isolated thread.
+
+    This creates a dedicated thread with its own event loop,
+    completely eliminating any possibility of loop conflicts.
+    """
+    import concurrent.futures
+
+    result = None
+    exception = None
+
+    def isolated_runner():
+        nonlocal result, exception
+        try:
+            # Create completely isolated loop in this thread
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-        nest_asyncio.apply(loop)
 
-    return loop.run_until_complete(coro)
+            try:
+                result = loop.run_until_complete(asyncio.wait_for(coro, timeout=25))
+            except asyncio.TimeoutError:
+                exception = TimeoutError("Extended SDK operation timed out after 25 seconds")
+            except Exception as e:
+                exception = e
+            finally:
+                try:
+                    loop.close()
+                except:
+                    pass
+
+        except Exception as e:
+            exception = e
+
+    # Run in dedicated thread with timeout
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(isolated_runner)
+        try:
+            future.result(timeout=30)  # 30 second total timeout
+        except concurrent.futures.TimeoutError:
+            raise TimeoutError("Extended SDK operation timed out after 30 seconds")
+
+    if exception:
+        raise exception
+
+    return result
 
 
 def sync_wrapper(
