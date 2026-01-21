@@ -2,6 +2,13 @@
 Utility modules for Extended Exchange SDK.
 """
 
+from extended.utils.async_helpers import (
+    get_current_loop,
+    thread_safe_gather,
+    thread_safe_wait_for,
+    thread_safe_create_task,
+    thread_safe_wait,
+)
 from extended.utils.constants import (
     INTERVAL_MAPPING,
     INTERVAL_MAPPING_REVERSE,
@@ -21,6 +28,12 @@ from extended.utils.helpers import (
 )
 
 __all__ = [
+    # Async helpers
+    "get_current_loop",
+    "thread_safe_gather",
+    "thread_safe_wait_for",
+    "thread_safe_create_task",
+    "thread_safe_wait",
     # Constants
     "INTERVAL_MAPPING",
     "INTERVAL_MAPPING_REVERSE",

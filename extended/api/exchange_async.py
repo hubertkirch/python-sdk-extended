@@ -4,7 +4,6 @@ Async Exchange API for Extended Exchange SDK.
 Provides trading operations matching Hyperliquid's Exchange class interface.
 """
 
-import asyncio
 import warnings
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -17,6 +16,7 @@ from extended.api.base_async import BaseAsyncAPI
 from extended.auth import ExtendedAuth
 from extended.exceptions import ExtendedAPIError, ExtendedValidationError
 from extended.transformers import OrderTransformer
+from extended.utils.async_helpers import thread_safe_gather
 from extended.utils.constants import (
     DEFAULT_SLIPPAGE,
     MARKET_ORDER_PRICE_CAP,
@@ -155,7 +155,7 @@ class AsyncExchangeAPI(BaseAsyncAPI):
                 return {"status": "error", "error": str(e)}
 
         # Execute all orders in parallel
-        results = await asyncio.gather(
+        results = await thread_safe_gather(
             *[place_single(req) for req in order_requests],
             return_exceptions=True,
         )
@@ -332,7 +332,7 @@ class AsyncExchangeAPI(BaseAsyncAPI):
         )
         markets_task = self._client.markets_info.get_markets_dict()
 
-        orderbook_response, stats_response, markets_dict = await asyncio.gather(
+        orderbook_response, stats_response, markets_dict = await thread_safe_gather(
             orderbook_task, stats_task, markets_task
         )
 

@@ -4,7 +4,6 @@ Async Info API for Extended Exchange SDK.
 Provides read-only operations matching Hyperliquid's Info class interface.
 """
 
-import asyncio
 import warnings
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -15,6 +14,7 @@ from x10.perpetual.configuration import EndpointConfig
 from extended.api.base_async import BaseAsyncAPI
 from extended.auth import ExtendedAuth
 from extended.transformers import AccountTransformer, MarketTransformer, OrderTransformer
+from extended.utils.async_helpers import thread_safe_gather
 from extended.utils.constants import INTERVAL_MAPPING, DEFAULT_CANDLE_TYPE
 from extended.utils.helpers import normalize_market_name, to_hyperliquid_market_name
 
@@ -73,7 +73,7 @@ class AsyncInfoAPI(BaseAsyncAPI):
         balance_task = self._client.account.get_balance()
         positions_task = self._client.account.get_positions()
 
-        balance_response, positions_response = await asyncio.gather(
+        balance_response, positions_response = await thread_safe_gather(
             balance_task, positions_task
         )
 

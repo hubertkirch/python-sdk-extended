@@ -4,13 +4,13 @@ Base async API class for Extended Exchange SDK.
 Provides common functionality for async API classes.
 """
 
-import asyncio
 from typing import Any, Awaitable, Callable, List, TypeVar
 
 from x10.perpetual.configuration import EndpointConfig
 from x10.perpetual.trading_client import PerpetualTradingClient
 
 from extended.auth import ExtendedAuth
+from extended.utils.async_helpers import thread_safe_gather
 
 T = TypeVar("T")
 
@@ -46,6 +46,9 @@ class BaseAsyncAPI:
         """
         Execute multiple async tasks in parallel.
 
+        Uses thread-safe gather to prevent "Future attached to
+        different loop" errors in ThreadPoolExecutor contexts.
+
         Args:
             tasks: List of async callables
 
@@ -53,7 +56,7 @@ class BaseAsyncAPI:
             List of results from all tasks
         """
         coroutines = [task() for task in tasks]
-        return await asyncio.gather(*coroutines)
+        return await thread_safe_gather(*coroutines)
 
     async def close(self):
         """Close the API and release resources."""
