@@ -53,7 +53,7 @@ def to_hyperliquid_market_name(name: str) -> str:
     return name.replace("-USD", "")
 
 
-def run_sync(coro: Coroutine[Any, Any, T]) -> T:
+def run_sync(coro_or_factory) -> T:
     """
     Run an async coroutine synchronously with nuclear-level thread safety.
 
@@ -66,11 +66,16 @@ def run_sync(coro: Coroutine[Any, Any, T]) -> T:
     3. Process isolation as ultimate fallback
 
     Args:
-        coro: The coroutine to run
+        coro_or_factory: Either a coroutine object or a callable that returns a coroutine
 
     Returns:
         The result of the coroutine
     """
+    # Handle callable factories to prevent coroutine reuse
+    if callable(coro_or_factory):
+        coro = coro_or_factory()
+    else:
+        coro = coro_or_factory
     # Quick check if we're in a ThreadPoolExecutor (production scenario)
     current_thread = threading.current_thread()
     is_threadpool = ("ThreadPoolExecutor" in current_thread.name or
@@ -79,7 +84,7 @@ def run_sync(coro: Coroutine[Any, Any, T]) -> T:
 
     if is_threadpool:
         # Production ThreadPoolExecutor context - use nuclear isolation
-        return _run_sync_thread_isolated(coro)
+        return _run_sync_thread_isolated(coro_or_factory)
 
     # Try standard approach first for non-ThreadPoolExecutor contexts
     try:
@@ -120,13 +125,13 @@ def run_sync(coro: Coroutine[Any, Any, T]) -> T:
     except RuntimeError as e:
         if "attached to a different loop" in str(e):
             # This is the exact error we're trying to fix - use nuclear isolation
-            return _run_sync_thread_isolated(coro)
+            return _run_sync_thread_isolated(coro_or_factory)
         else:
             # Other RuntimeError - re-raise
             raise
 
 
-def _run_sync_thread_isolated(coro: Coroutine[Any, Any, T]) -> T:
+def _run_sync_thread_isolated(coro_or_factory) -> T:
     """
     Nuclear option: Run coroutine in completely isolated thread.
 
@@ -146,6 +151,11 @@ def _run_sync_thread_isolated(coro: Coroutine[Any, Any, T]) -> T:
             asyncio.set_event_loop(loop)
 
             try:
+                # Handle callable factories to create fresh coroutine in isolated thread
+                if callable(coro_or_factory):
+                    coro = coro_or_factory()
+                else:
+                    coro = coro_or_factory
                 result = loop.run_until_complete(asyncio.wait_for(coro, timeout=25))
             except asyncio.TimeoutError:
                 exception = TimeoutError("Extended SDK operation timed out after 25 seconds")

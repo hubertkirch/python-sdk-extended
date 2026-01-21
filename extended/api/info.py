@@ -56,7 +56,7 @@ class InfoAPI(BaseSyncAPI):
             - marginSummary: Margin details
             - withdrawable: Available for withdrawal
         """
-        return run_sync(self._async.user_state(address))
+        return run_sync(lambda: self._async.user_state(address))
 
     def open_orders(self, address: Optional[str] = None) -> List[Dict[str, Any]]:
         """
@@ -68,7 +68,7 @@ class InfoAPI(BaseSyncAPI):
         Returns:
             List of orders in Hyperliquid format
         """
-        return run_sync(self._async.open_orders(address))
+        return run_sync(lambda: self._async.open_orders(address))
 
     def meta(self) -> Dict[str, Any]:
         """
@@ -77,7 +77,7 @@ class InfoAPI(BaseSyncAPI):
         Returns:
             Dict with Hyperliquid-compatible structure with universe list
         """
-        return run_sync(self._async.meta())
+        return run_sync(lambda: self._async.meta())
 
     def all_mids(self) -> Dict[str, str]:
         """
@@ -86,7 +86,7 @@ class InfoAPI(BaseSyncAPI):
         Returns:
             Dict mapping coin name to mid price string
         """
-        return run_sync(self._async.all_mids())
+        return run_sync(lambda: self._async.all_mids())
 
     def l2_snapshot(self, name: str) -> Dict[str, Any]:
         """
@@ -98,7 +98,7 @@ class InfoAPI(BaseSyncAPI):
         Returns:
             Dict in Hyperliquid format with coin, levels, and time
         """
-        return run_sync(self._async.l2_snapshot(name))
+        return run_sync(lambda: self._async.l2_snapshot(name))
 
     def candles_snapshot(
         self,
@@ -122,7 +122,7 @@ class InfoAPI(BaseSyncAPI):
             List of candles in Hyperliquid format
         """
         return run_sync(
-            self._async.candles_snapshot(name, interval, startTime, endTime, candle_type)
+            lambda: self._async.candles_snapshot(name, interval, startTime, endTime, candle_type)
         )
 
     def user_fills(
@@ -147,7 +147,7 @@ class InfoAPI(BaseSyncAPI):
         Note:
             The `cloid` field will be null in responses.
         """
-        return run_sync(self._async.user_fills(coin, address, start_time, end_time))
+        return run_sync(lambda: self._async.user_fills(coin, address, start_time, end_time))
 
     def get_position_leverage(
         self,
@@ -164,8 +164,8 @@ class InfoAPI(BaseSyncAPI):
         Returns:
             Current leverage as integer, or None if not found
         """
-        return run_sync(self._async.get_position_leverage(symbol, address))
+        return run_sync(lambda: self._async.get_position_leverage(symbol, address))
 
     def close(self):
         """Close the API and release resources."""
-        run_sync(self._async.close())
+        run_sync(lambda: self._async.close())
