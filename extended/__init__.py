@@ -51,7 +51,7 @@ Key Differences from Hyperliquid:
     - Market orders: Simulated as IOC limit orders (may not fill completely)
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 # Main clients - NATIVE SYNC ONLY
 from extended.client import Client
