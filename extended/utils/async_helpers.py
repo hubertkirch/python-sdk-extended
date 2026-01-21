@@ -86,18 +86,57 @@ async def thread_safe_gather(
     # Get the current running loop (we're in async context)
     current_loop = asyncio.get_running_loop()
 
-    # Convert awaitables to tasks in current loop
-    tasks = []
+    # Process each awaitable to ensure they're compatible with current loop
+    compatible_tasks = []
     for awaitable in awaitables:
         if asyncio.iscoroutine(awaitable):
             # Create task in current loop
             task = current_loop.create_task(awaitable)
+            compatible_tasks.append(task)
+        elif hasattr(awaitable, '_loop') and awaitable._loop != current_loop:
+            # Task/Future from different loop - we need to recreate
+            # This is the critical fix for the "different loop" error
+            if hasattr(awaitable, '_coro') and awaitable._coro is not None:
+                # It's a Task with coroutine, recreate in current loop
+                task = current_loop.create_task(awaitable._coro)
+                compatible_tasks.append(task)
+            else:
+                # It's a Future or completed Task - try to await it directly
+                # This will raise the "different loop" error, so we catch and handle
+                try:
+                    # If it's already done, get the result
+                    if awaitable.done():
+                        if return_exceptions:
+                            try:
+                                result = awaitable.result()
+                                compatible_tasks.append(asyncio.create_task(_return_result(result)))
+                            except Exception as e:
+                                compatible_tasks.append(asyncio.create_task(_return_result(e)))
+                        else:
+                            result = awaitable.result()
+                            compatible_tasks.append(asyncio.create_task(_return_result(result)))
+                    else:
+                        # Not done and no coroutine - can't safely transfer
+                        if return_exceptions:
+                            error = RuntimeError(f"Cannot transfer pending future from different loop: {awaitable}")
+                            compatible_tasks.append(asyncio.create_task(_return_result(error)))
+                        else:
+                            raise RuntimeError(f"Cannot transfer pending future from different loop: {awaitable}")
+                except Exception as e:
+                    if return_exceptions:
+                        compatible_tasks.append(asyncio.create_task(_return_result(e)))
+                    else:
+                        raise
         else:
-            # Already a task/future, use as-is
-            task = awaitable
-        tasks.append(task)
+            # Same loop or no loop attribute, use as-is
+            compatible_tasks.append(awaitable)
 
-    return await asyncio.gather(*tasks, return_exceptions=return_exceptions)
+    return await asyncio.gather(*compatible_tasks, return_exceptions=return_exceptions)
+
+
+async def _return_result(result: Any) -> Any:
+    """Helper coroutine to return a value asynchronously."""
+    return result
 
 
 async def thread_safe_wait_for(
