@@ -53,15 +53,11 @@ Key Differences from Hyperliquid:
 
 __version__ = "0.1.0"
 
-# Main clients
+# Main clients - NATIVE SYNC ONLY
 from extended.client import Client
-from extended.async_client import AsyncClient
 
-# Setup functions (Hyperliquid-style)
-from extended.setup import setup, async_setup
-
-# API classes (for type hints)
-from extended.api import InfoAPI, AsyncInfoAPI, ExchangeAPI, AsyncExchangeAPI
+# API classes (for type hints) - NATIVE SYNC ONLY
+from extended.api import InfoAPI, ExchangeAPI
 
 # Configuration
 from extended.config import TESTNET_CONFIG, MAINNET_CONFIG, EndpointConfig
@@ -87,17 +83,11 @@ from extended.types import (
 __all__ = [
     # Version
     "__version__",
-    # Main clients
+    # Main clients - NATIVE SYNC ONLY
     "Client",
-    "AsyncClient",
-    # Setup functions (Hyperliquid-style)
-    "setup",
-    "async_setup",
-    # API classes
+    # API classes - NATIVE SYNC ONLY
     "InfoAPI",
-    "AsyncInfoAPI",
     "ExchangeAPI",
-    "AsyncExchangeAPI",
     # Config
     "TESTNET_CONFIG",
     "MAINNET_CONFIG",

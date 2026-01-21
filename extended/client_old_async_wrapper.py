@@ -1,8 +1,7 @@
 """
-Native Sync Client for Extended Exchange SDK.
+Sync Client for Extended Exchange SDK.
 
 Main entry point matching Hyperliquid/Pacifica Client class.
-REPLACES problematic run_sync() approach with native sync implementation.
 """
 
 from typing import Optional
@@ -11,14 +10,14 @@ from extended.api.exchange import ExchangeAPI
 from extended.api.info import InfoAPI
 from extended.auth import ExtendedAuth
 from extended.config import MAINNET_CONFIG, TESTNET_CONFIG
+from extended.utils.helpers import run_sync
 
 
 class Client:
     """
     Extended Exchange client with Hyperliquid-compatible interface.
 
-    Provides synchronous access to Info and Exchange APIs using NATIVE SYNC implementation.
-    NO async/await or run_sync() anywhere - pure synchronous operation.
+    Provides synchronous access to Info and Exchange APIs.
 
     Usage:
         client = Client(
@@ -29,11 +28,11 @@ class Client:
             testnet=True,
         )
 
-        # Info operations - NATIVE SYNC
+        # Info operations
         state = client.info.user_state()
         orders = client.info.open_orders()
 
-        # Exchange operations - NATIVE SYNC
+        # Exchange operations
         client.exchange.order("BTC", is_buy=True, sz=0.01, limit_px=50000)
         client.exchange.cancel("BTC", oid=12345)
 
@@ -53,7 +52,7 @@ class Client:
         timeout: int = 30,
     ):
         """
-        Initialize Extended client with NATIVE SYNC implementation.
+        Initialize Extended client.
 
         Args:
             api_key: Extended Exchange API key
@@ -61,8 +60,8 @@ class Client:
             stark_private_key: L2 Stark private key (hex string)
             stark_public_key: L2 Stark public key (hex string)
             testnet: Use testnet (default False)
-            base_url: Custom API base URL (optional)
-            timeout: Request timeout in seconds
+            base_url: Custom API base URL (optional, not currently used)
+            timeout: Request timeout in seconds (default 30, not currently used)
 
         Note:
             Credentials must be obtained from your onboarding infrastructure.
@@ -75,28 +74,20 @@ class Client:
             stark_public_key=stark_public_key,
             testnet=testnet,
         )
-
-        # Use appropriate config
-        self._config = TESTNET_CONFIG if testnet else MAINNET_CONFIG
-        if base_url:
-            # Create custom config with provided base_url
-            from x10.perpetual.configuration import EndpointConfig
-            self._config = EndpointConfig(api_base_url=base_url)
-
+        self._config = self._auth.get_config()
         self._timeout = timeout
 
-        # Create NATIVE SYNC APIs - NO run_sync() wrapper
         self._info = InfoAPI(self._auth, self._config)
         self._exchange = ExchangeAPI(self._auth, self._config)
 
     @property
     def info(self) -> InfoAPI:
-        """Access Info API for read operations - NATIVE SYNC."""
+        """Access Info API for read operations."""
         return self._info
 
     @property
     def exchange(self) -> ExchangeAPI:
-        """Access Exchange API for trading operations - NATIVE SYNC."""
+        """Access Exchange API for trading operations."""
         return self._exchange
 
     @property
@@ -110,7 +101,6 @@ class Client:
         return self._auth.stark_public_key
 
     def close(self):
-        """Close the client and release resources - NATIVE SYNC."""
+        """Close the client and release resources."""
         self._info.close()
-        self._exchange.close()
-        # No async cleanup needed for native sync implementation
+        # Exchange uses the same auth, so closing info is sufficient

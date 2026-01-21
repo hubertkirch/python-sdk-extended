@@ -7,8 +7,8 @@ REPLACES problematic run_sync() approach with native sync implementation.
 
 from typing import Optional
 
-from extended.api.exchange import ExchangeAPI
-from extended.api.info import InfoAPI
+from extended.api.exchange_new_sync import ExchangeAPI
+from extended.api.info_new_sync import InfoAPI
 from extended.auth import ExtendedAuth
 from extended.config import MAINNET_CONFIG, TESTNET_CONFIG
 
