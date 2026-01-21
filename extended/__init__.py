@@ -56,6 +56,9 @@ __version__ = "0.1.0"
 # Main clients - NATIVE SYNC ONLY
 from extended.client import Client
 
+# Setup function (Hyperliquid-style) - NATIVE SYNC ONLY
+from extended.setup import setup
+
 # API classes (for type hints) - NATIVE SYNC ONLY
 from extended.api import InfoAPI, ExchangeAPI
 

@@ -2,74 +2,89 @@
 Native Sync Exchange API for Extended Exchange SDK.
 
 Provides trading operations matching Hyperliquid's Exchange class interface.
-Uses direct HTTP calls with requests instead of async X10 client.
-MIRRORS Pacifica ExchangeAPI architecture exactly.
+Uses direct HTTP calls with requests and X10 signing infrastructure.
 """
 
+import time
 import warnings
-from datetime import datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR
 from typing import Any, Dict, List, Optional
 
 from extended.api.base_native_sync import BaseNativeSyncClient, ExtendedAPIError
 from extended.auth_sync import SimpleSyncAuth
 from extended.config_sync import SimpleSyncConfig
+from extended.transformers_sync import (
+    SyncOrderTransformer,
+    normalize_market_name,
+    to_hyperliquid_market_name,
+)
 
-# Simple exception for validation errors
-class ExtendedValidationError(Exception):
-    pass
+# Import X10 signing infrastructure (all sync!)
+from x10.perpetual.accounts import StarkPerpetualAccount
+from x10.perpetual.configuration import StarknetDomain
+from x10.perpetual.markets import MarketModel
+from x10.perpetual.order_object import create_order_object
+from x10.perpetual.orders import OrderSide, TimeInForce
 
-# Mock constants to avoid dependencies
+# Constants
 DEFAULT_SLIPPAGE = 0.05
 MARKET_ORDER_PRICE_CAP = 1.05
 MARKET_ORDER_PRICE_FLOOR = 0.95
 
-# Mock transformers to avoid dependencies
-class OrderTransformer:
-    @staticmethod
-    def transform_order_response(response_data):
-        return {"status": "ok", "response": {"type": "order", "data": {"statuses": []}}}
+# Time in force mapping (Hyperliquid -> X10)
+TIF_MAPPING = {
+    "Gtc": TimeInForce.GTT,
+    "Ioc": TimeInForce.IOC,
+    "Alo": TimeInForce.GTT,  # ALO uses GTT with post_only=True
+}
 
-    @staticmethod
-    def transform_error_response(error_msg):
-        return {"status": "error", "response": error_msg}
 
-    @staticmethod
-    def transform_cancel_response(success=True, order_id=None):
-        return {"status": "ok" if success else "error", "response": {"type": "cancel"}}
+class ExtendedValidationError(Exception):
+    """Validation error for Exchange API."""
+    pass
 
-    @staticmethod
-    def transform_leverage_response():
-        return {"status": "ok", "response": {"type": "leverage"}}
 
-    @staticmethod
-    def transform_bulk_orders_response(results):
-        return {"status": "ok", "response": {"type": "bulk_orders", "data": results}}
+def parse_order_type(order_type: Optional[Dict[str, Any]]) -> tuple:
+    """
+    Parse Hyperliquid order_type to Extended params.
 
-# Mock utility functions
-def normalize_market_name(name: str) -> str:
-    if "-" not in name:
-        return f"{name}-USD"
-    return name
+    Returns:
+        Tuple of (TimeInForce, post_only)
+    """
+    if order_type is None:
+        return TimeInForce.GTT, False
 
-def parse_order_type(order_type):
-    # Simple mock - return default values
-    return "GTC", False  # (time_in_force, post_only)
+    if "limit" in order_type:
+        tif = order_type["limit"].get("tif", "Gtc")
+        post_only = tif == "Alo"
+        return TIF_MAPPING.get(tif, TimeInForce.GTT), post_only
 
-def parse_builder(builder):
+    return TimeInForce.GTT, False
+
+
+def parse_builder(builder: Optional[Dict[str, Any]]) -> tuple:
+    """
+    Parse Hyperliquid builder format to Extended params.
+
+    Returns:
+        Tuple of (builder_id, builder_fee)
+    """
     if builder is None:
         return None, None
-    return builder.get("b"), builder.get("f")
+
+    builder_id = int(builder["b"])
+    fee_tenths_bps = builder.get("f", 0)
+    builder_fee = Decimal(fee_tenths_bps) / Decimal(100000)
+
+    return builder_id, builder_fee
 
 
 class NativeSyncExchangeAPI(BaseNativeSyncClient):
     """
     Extended Exchange Native Sync trading API with Hyperliquid-compatible interface.
 
-    MIRRORS Pacifica ExchangeAPI architecture exactly - uses requests directly
-    instead of async X10 client operations.
-
-    Handles order placement, cancellation, and account management.
+    Uses requests for HTTP and X10 signing infrastructure for order signing.
+    All operations are synchronous.
 
     Example:
         exchange = NativeSyncExchangeAPI(auth, config)
@@ -87,6 +102,53 @@ class NativeSyncExchangeAPI(BaseNativeSyncClient):
         """
         super().__init__(auth, config)
 
+        # Create StarkPerpetualAccount for signing (sync!)
+        self._stark_account = StarkPerpetualAccount(
+            vault=auth.vault,
+            private_key=auth.stark_private_key,
+            public_key=auth.stark_public_key,
+            api_key=auth.api_key,
+        )
+
+        # Create StarknetDomain from config
+        self._starknet_domain = StarknetDomain(
+            name="Perpetuals",
+            version="v0",
+            chain_id="SN_MAIN" if "sepolia" not in config.api_base_url else "SN_SEPOLIA",
+            revision="1",
+        )
+
+        # Cache for market models
+        self._markets_cache: Dict[str, MarketModel] = {}
+
+    def _get_market(self, market_name: str) -> MarketModel:
+        """
+        Get MarketModel for a market, with caching.
+
+        Args:
+            market_name: Market name in Extended format (e.g., "BTC-USD")
+
+        Returns:
+            MarketModel instance
+        """
+        if market_name not in self._markets_cache:
+            # Fetch markets from API
+            response = self.get("/info/markets", authenticated=False)
+            markets_data = response.get("data", [])
+
+            for market_data in markets_data:
+                try:
+                    market = MarketModel.model_validate(market_data)
+                    self._markets_cache[market.name] = market
+                except Exception:
+                    # Skip markets that fail to parse
+                    pass
+
+        if market_name not in self._markets_cache:
+            raise ExtendedValidationError(f"Market {market_name} not found")
+
+        return self._markets_cache[market_name]
+
     def order(
         self,
         name: str,
@@ -99,7 +161,7 @@ class NativeSyncExchangeAPI(BaseNativeSyncClient):
         builder: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        Place a limit order - NATIVE SYNC.
+        Place a limit order - NATIVE SYNC with proper signing.
 
         Args:
             name: Market name (e.g., "BTC" or "BTC-USD")
@@ -116,38 +178,58 @@ class NativeSyncExchangeAPI(BaseNativeSyncClient):
             Hyperliquid-format response:
             {"status": "ok", "response": {"type": "order", "data": {"statuses": [...]}}}
         """
-        if order_type is None:
-            order_type = {"limit": {"tif": "Gtc"}}
-
         market_name = normalize_market_name(name)
-        side = "BUY" if is_buy else "SELL"
+        side = OrderSide.BUY if is_buy else OrderSide.SELL
         tif, post_only = parse_order_type(order_type)
         builder_id, builder_fee = parse_builder(builder)
 
-        # Prepare order data for HTTP request
-        order_data = {
-            "market": market_name,
-            "amount": str(sz),
-            "price": str(limit_px),
-            "side": side,
-            "post_only": post_only,
-            "time_in_force": tif.value if hasattr(tif, 'value') else str(tif),
-            "reduce_only": reduce_only,
-        }
-
-        if cloid:
-            order_data["external_id"] = cloid
-        if builder_id is not None:
-            order_data["builder_id"] = builder_id
-        if builder_fee is not None:
-            order_data["builder_fee"] = str(builder_fee)
-
         try:
-            response = self.post("/orders", data=order_data, authenticated=True)
-            return OrderTransformer.transform_order_response(response.get("data"))
+            # Get market model for order creation
+            market = self._get_market(market_name)
 
+            # Create signed order using X10 infrastructure (all sync!)
+            order = create_order_object(
+                account=self._stark_account,
+                market=market,
+                amount_of_synthetic=Decimal(str(sz)),
+                price=Decimal(str(limit_px)),
+                side=side,
+                starknet_domain=self._starknet_domain,
+                post_only=post_only,
+                time_in_force=tif,
+                order_external_id=cloid,
+                builder_fee=builder_fee,
+                builder_id=builder_id,
+                reduce_only=reduce_only,
+            )
+
+            # Send order via HTTP
+            order_data = order.to_api_request_json(exclude_none=True)
+            response = self.post("/user/order", data=order_data, authenticated=True)
+
+            # Transform response
+            data = response.get("data", {})
+            return {
+                "status": "ok",
+                "response": {
+                    "type": "order",
+                    "data": {
+                        "statuses": [
+                            {
+                                "resting": {
+                                    "oid": data.get("id", data.get("orderId", 0)),
+                                    "cloid": data.get("externalId", cloid),
+                                }
+                            }
+                        ]
+                    },
+                },
+            }
+
+        except ExtendedAPIError as e:
+            return SyncOrderTransformer.transform_error_response(str(e.message))
         except Exception as e:
-            return OrderTransformer.transform_error_response(str(e))
+            return SyncOrderTransformer.transform_error_response(str(e))
 
     def bulk_orders(
         self,
@@ -156,7 +238,7 @@ class NativeSyncExchangeAPI(BaseNativeSyncClient):
         grouping: str = "na",
     ) -> Dict[str, Any]:
         """
-        Place multiple orders in parallel - NATIVE SYNC.
+        Place multiple orders sequentially - NATIVE SYNC.
 
         WARNING: Unlike Hyperliquid, Extended does not support atomic
         bulk orders. Orders are sent sequentially and may partially fail.
@@ -185,7 +267,6 @@ class NativeSyncExchangeAPI(BaseNativeSyncClient):
                     builder=builder or request.get("builder"),
                 )
 
-                # Extract the placed order data from the response
                 if result.get("status") == "ok":
                     statuses = result.get("response", {}).get("data", {}).get("statuses", [])
                     if statuses and "resting" in statuses[0]:
@@ -204,7 +285,7 @@ class NativeSyncExchangeAPI(BaseNativeSyncClient):
             except Exception as e:
                 results.append({"status": "error", "error": str(e)})
 
-        return OrderTransformer.transform_bulk_orders_response(results)
+        return SyncOrderTransformer.transform_bulk_orders_response(results)
 
     def cancel(
         self,
@@ -229,16 +310,18 @@ class NativeSyncExchangeAPI(BaseNativeSyncClient):
 
         try:
             if oid is not None:
-                response = self.delete(f"/orders/{oid}", authenticated=True)
+                # Endpoint: /user/order/<order_id> (DELETE)
+                response = self.delete(f"/user/order/{oid}", authenticated=True)
             else:
-                # Cancel by external_id
-                cancel_data = {"external_id": cloid}
-                response = self.post("/orders/cancel", data=cancel_data, authenticated=True)
+                # Endpoint: /user/order?externalId=<cloid> (DELETE)
+                response = self.delete("/user/order", params={"externalId": cloid}, authenticated=True)
 
-            return OrderTransformer.transform_cancel_response(success=True, order_id=oid)
+            return SyncOrderTransformer.transform_cancel_response(success=True, order_id=oid)
 
+        except ExtendedAPIError as e:
+            return SyncOrderTransformer.transform_error_response(str(e.message))
         except Exception as e:
-            return OrderTransformer.transform_error_response(str(e))
+            return SyncOrderTransformer.transform_error_response(str(e))
 
     def cancel_by_cloid(self, name: str, cloid: str) -> Dict[str, Any]:
         """
@@ -267,7 +350,6 @@ class NativeSyncExchangeAPI(BaseNativeSyncClient):
         Returns:
             Combined cancel results
         """
-        # Group by oids and cloids for mass cancel
         oids = []
         cloids = []
 
@@ -280,11 +362,12 @@ class NativeSyncExchangeAPI(BaseNativeSyncClient):
         try:
             cancel_data = {}
             if oids:
-                cancel_data["order_ids"] = oids
+                cancel_data["orderIds"] = oids
             if cloids:
-                cancel_data["external_order_ids"] = cloids
+                cancel_data["externalOrderIds"] = cloids
 
-            response = self.post("/orders/mass-cancel", data=cancel_data, authenticated=True)
+            # Endpoint: /user/order/massCancel (POST)
+            response = self.post("/user/order/massCancel", data=cancel_data, authenticated=True)
 
             return {
                 "status": "ok",
@@ -296,8 +379,10 @@ class NativeSyncExchangeAPI(BaseNativeSyncClient):
                 },
             }
 
+        except ExtendedAPIError as e:
+            return SyncOrderTransformer.transform_error_response(str(e.message))
         except Exception as e:
-            return OrderTransformer.transform_error_response(str(e))
+            return SyncOrderTransformer.transform_error_response(str(e))
 
     def update_leverage(
         self,
@@ -329,14 +414,17 @@ class NativeSyncExchangeAPI(BaseNativeSyncClient):
         try:
             leverage_data = {
                 "market": market_name,
-                "leverage": leverage
+                "leverage": str(leverage)
             }
 
-            response = self.post("/account/leverage", data=leverage_data, authenticated=True)
-            return OrderTransformer.transform_leverage_response()
+            # Endpoint: /user/leverage (PATCH)
+            response = self.patch("/user/leverage", data=leverage_data, authenticated=True)
+            return SyncOrderTransformer.transform_leverage_response()
 
+        except ExtendedAPIError as e:
+            return SyncOrderTransformer.transform_error_response(str(e.message))
         except Exception as e:
-            return OrderTransformer.transform_error_response(str(e))
+            return SyncOrderTransformer.transform_error_response(str(e))
 
     def _calculate_market_order_price(
         self,
@@ -359,53 +447,37 @@ class NativeSyncExchangeAPI(BaseNativeSyncClient):
         Returns:
             Calculated limit price (rounded to market precision)
         """
-        from decimal import ROUND_CEILING, ROUND_FLOOR
-
         market_name = normalize_market_name(name)
 
-        # Get orderbook and market stats via HTTP
-        orderbook_response = self.get(f"/orderbook/{market_name}", authenticated=False)
-        stats_response = self.get(f"/markets/{market_name}/stats", authenticated=False)
-        markets_response = self.get("/markets", authenticated=False)
+        # Get market for tick size
+        market = self._get_market(market_name)
+        tick_size = market.trading_config.min_price_change
+
+        # Get orderbook and stats
+        orderbook_response = self.get(f"/info/markets/{market_name}/orderbook", authenticated=False)
+        stats_response = self.get(f"/info/markets/{market_name}/stats", authenticated=False)
 
         orderbook = orderbook_response.get("data", {})
         stats = stats_response.get("data", {})
-        mark_price = Decimal(str(stats.get("mark_price", 0)))
-
-        # Find market config
-        markets = markets_response.get("data", [])
-        market = None
-        for m in markets:
-            if m.get("name") == market_name:
-                market = m
-                break
-
-        if not market:
-            raise ExtendedAPIError(404, f"Market {market_name} not found")
+        mark_price = Decimal(str(stats.get("markPrice", stats.get("mark_price", "0"))))
 
         if is_buy:
-            # Use best ask with slippage, capped at mark * 1.05
-            asks = orderbook.get("asks", [])
+            asks = orderbook.get("ask", orderbook.get("asks", []))
             best_ask = Decimal(str(asks[0].get("price", mark_price))) if asks else mark_price
 
             target_price = best_ask * Decimal(1 + slippage)
             max_price = mark_price * Decimal(str(MARKET_ORDER_PRICE_CAP))
             price = min(target_price, max_price)
 
-            # Round up for buys to ensure fill
-            tick_size = Decimal(str(market.get("tick_size", "0.01")))
             return (price / tick_size).quantize(Decimal('1'), rounding=ROUND_CEILING) * tick_size
         else:
-            # Use best bid with slippage, floored at mark * 0.95
-            bids = orderbook.get("bids", [])
+            bids = orderbook.get("bid", orderbook.get("bids", []))
             best_bid = Decimal(str(bids[0].get("price", mark_price))) if bids else mark_price
 
             target_price = best_bid * Decimal(1 - slippage)
             min_price = mark_price * Decimal(str(MARKET_ORDER_PRICE_FLOOR))
             price = max(target_price, min_price)
 
-            # Round down for sells to ensure fill
-            tick_size = Decimal(str(market.get("tick_size", "0.01")))
             return (price / tick_size).quantize(Decimal('1'), rounding=ROUND_FLOOR) * tick_size
 
     def market_open(
@@ -476,25 +548,23 @@ class NativeSyncExchangeAPI(BaseNativeSyncClient):
         """
         market_name = normalize_market_name(coin)
 
-        # Get current position to determine size and side
-        params = {"markets": [market_name]}
-        positions_response = self.get("/account/positions", params=params, authenticated=True)
+        # Get current position
+        params = {"market": [market_name]}
+        positions_response = self.get("/user/positions", params=params, authenticated=True)
 
         positions = positions_response.get("data", [])
         if not positions:
-            return OrderTransformer.transform_error_response(
+            return SyncOrderTransformer.transform_error_response(
                 f"No open position found for {coin}"
             )
 
         position = positions[0]
 
         # Determine size to close
-        close_sz = float(sz) if sz is not None else float(position.get("size", 0))
+        close_sz = float(sz) if sz is not None else abs(float(position.get("size", 0)))
 
-        # Close is opposite side (side can be str or PositionSide enum)
-        side = position.get("side")
-        if hasattr(side, 'value'):
-            side = side.value
+        # Close is opposite side
+        side = position.get("side", "LONG")
         is_buy = side == "SHORT"
 
         if px is not None:

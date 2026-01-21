@@ -19,15 +19,23 @@ class SimpleSyncConfig:
     """
 
     api_base_url: str
+    signing_domain: str = ""
     timeout: int = 30
 
-    def __init__(self, api_base_url: str = None, testnet: bool = False, timeout: int = 30):
+    def __init__(self, api_base_url: str = None, signing_domain: str = "", testnet: bool = False, timeout: int = 30):
         if api_base_url:
             self.api_base_url = api_base_url
         elif testnet:
-            self.api_base_url = "https://testnet-api.extended.com"  # Placeholder
+            self.api_base_url = "https://api.starknet.sepolia.extended.exchange/api/v1"
         else:
-            self.api_base_url = "https://api.extended.com"  # Placeholder
+            self.api_base_url = "https://api.starknet.extended.exchange/api/v1"
+
+        if signing_domain:
+            self.signing_domain = signing_domain
+        elif testnet:
+            self.signing_domain = "starknet.sepolia.extended.exchange"
+        else:
+            self.signing_domain = "extended.exchange"
 
         self.timeout = timeout
 

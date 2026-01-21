@@ -145,3 +145,12 @@ class BaseNativeSyncClient:
     def delete(self, endpoint: str, params: Optional[Dict] = None, authenticated: bool = True) -> Dict:
         """DELETE request"""
         return self._request("DELETE", endpoint, params=params, authenticated=authenticated)
+
+    def patch(self, endpoint: str, data: Optional[Dict] = None, authenticated: bool = True) -> Dict:
+        """PATCH request"""
+        return self._request("PATCH", endpoint, data=data, authenticated=authenticated)
+
+    def close(self):
+        """Close the session."""
+        if self.session:
+            self.session.close()

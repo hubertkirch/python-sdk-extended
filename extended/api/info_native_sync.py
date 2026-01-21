@@ -2,8 +2,7 @@
 Native Sync Info API for Extended Exchange SDK.
 
 Provides read-only operations matching Hyperliquid's Info class interface.
-Uses direct HTTP calls with requests instead of async X10 client.
-MIRRORS Pacifica InfoAPI architecture exactly.
+Uses direct HTTP calls with requests - no async dependencies.
 """
 
 import warnings
@@ -13,60 +12,34 @@ from typing import Any, Dict, List, Optional
 from extended.api.base_native_sync import BaseNativeSyncClient
 from extended.auth_sync import SimpleSyncAuth
 from extended.config_sync import SimpleSyncConfig
+from extended.transformers_sync import (
+    SyncAccountTransformer,
+    SyncMarketTransformer,
+    SyncOrderTransformer,
+    normalize_market_name,
+    to_hyperliquid_market_name,
+)
 
-# Mock transformers to avoid dependencies
-class AccountTransformer:
-    @staticmethod
-    def transform_user_state(balance_data, positions_data):
-        return {"marginSummary": {"accountValue": "0"}, "assetPositions": []}
+# Interval mapping (Hyperliquid -> Extended)
+INTERVAL_MAPPING = {
+    "1m": "PT1M",
+    "5m": "PT5M",
+    "15m": "PT15M",
+    "30m": "PT30M",
+    "1h": "PT1H",
+    "2h": "PT2H",
+    "4h": "PT4H",
+    "1d": "P1D",
+}
 
-class MarketTransformer:
-    @staticmethod
-    def transform_meta(markets_data):
-        return {"universe": []}
-
-    @staticmethod
-    def transform_all_mids(markets_data):
-        return {}
-
-    @staticmethod
-    def transform_l2_snapshot(orderbook_data):
-        return {"coin": "BTC", "levels": [[], []], "time": 0}
-
-    @staticmethod
-    def transform_candles(candles, coin, interval):
-        return []
-
-class OrderTransformer:
-    @staticmethod
-    def transform_open_orders(orders_data):
-        return []
-
-    @staticmethod
-    def transform_user_fills(trades_data):
-        return []
-
-# Mock utilities to avoid dependencies
-INTERVAL_MAPPING = {"1m": "PT1M", "5m": "PT5M", "1h": "PT1H", "1d": "P1D"}
 DEFAULT_CANDLE_TYPE = "trades"
-
-def normalize_market_name(name: str) -> str:
-    """Convert market name to Extended format."""
-    if "-" not in name:
-        return f"{name}-USD"
-    return name
-
-def to_hyperliquid_market_name(name: str) -> str:
-    """Convert Extended market name to Hyperliquid format."""
-    return name.replace("-USD", "")
 
 
 class NativeSyncInfoAPI(BaseNativeSyncClient):
     """
     Extended Exchange Native Sync Info API with Hyperliquid-compatible interface.
 
-    MIRRORS Pacifica InfoAPI architecture exactly - uses requests directly
-    instead of async X10 client operations.
+    Uses requests directly for pure synchronous operation.
 
     Note: Unlike Hyperliquid, Extended requires authentication for
     user-specific data. The `address` parameter is accepted for
@@ -109,11 +82,11 @@ class NativeSyncInfoAPI(BaseNativeSyncClient):
                 UserWarning,
             )
 
-        # Make direct HTTP calls instead of using async client
-        balance_response = self.get("/account/balance", authenticated=True)
-        positions_response = self.get("/account/positions", authenticated=True)
+        # Endpoints from x10/perpetual/trading_client/account_module.py
+        balance_response = self.get("/user/balance", authenticated=True)
+        positions_response = self.get("/user/positions", authenticated=True)
 
-        return AccountTransformer.transform_user_state(
+        return SyncAccountTransformer.transform_user_state(
             balance_response.get("data", {}),
             positions_response.get("data", []) or [],
         )
@@ -135,8 +108,9 @@ class NativeSyncInfoAPI(BaseNativeSyncClient):
                 UserWarning,
             )
 
-        response = self.get("/account/open-orders", authenticated=True)
-        return OrderTransformer.transform_open_orders(response.get("data", []) or [])
+        # Endpoint: /user/orders
+        response = self.get("/user/orders", authenticated=True)
+        return SyncOrderTransformer.transform_open_orders(response.get("data", []) or [])
 
     def meta(self) -> Dict[str, Any]:
         """
@@ -145,8 +119,9 @@ class NativeSyncInfoAPI(BaseNativeSyncClient):
         Returns:
             Dict with Hyperliquid-compatible structure with universe list
         """
-        response = self.get("/markets", authenticated=False)
-        return MarketTransformer.transform_meta(response.get("data", []) or [])
+        # Endpoint: /info/markets
+        response = self.get("/info/markets", authenticated=False)
+        return SyncMarketTransformer.transform_meta(response.get("data", []) or [])
 
     def all_mids(self) -> Dict[str, str]:
         """
@@ -155,8 +130,9 @@ class NativeSyncInfoAPI(BaseNativeSyncClient):
         Returns:
             Dict mapping coin name to mid price string
         """
-        response = self.get("/markets", authenticated=False)
-        return MarketTransformer.transform_all_mids(response.get("data", []) or [])
+        # Endpoint: /info/markets (includes stats)
+        response = self.get("/info/markets", authenticated=False)
+        return SyncMarketTransformer.transform_all_mids(response.get("data", []) or [])
 
     def l2_snapshot(self, name: str) -> Dict[str, Any]:
         """
@@ -169,8 +145,9 @@ class NativeSyncInfoAPI(BaseNativeSyncClient):
             Dict in Hyperliquid format with coin, levels, and time
         """
         market_name = normalize_market_name(name)
-        response = self.get(f"/orderbook/{market_name}", authenticated=False)
-        return MarketTransformer.transform_l2_snapshot(response.get("data"))
+        # Endpoint: /info/markets/<market>/orderbook
+        response = self.get(f"/info/markets/{market_name}/orderbook", authenticated=False)
+        return SyncMarketTransformer.transform_l2_snapshot(response.get("data", {}))
 
     def candles_snapshot(
         self,
@@ -196,25 +173,26 @@ class NativeSyncInfoAPI(BaseNativeSyncClient):
         market_name = normalize_market_name(name)
         extended_interval = INTERVAL_MAPPING.get(interval, "PT1M")
 
-        # Convert endTime to datetime for API
-        end_dt = datetime.fromtimestamp(endTime / 1000, tz=timezone.utc)
-
+        # Convert endTime to milliseconds for API
         params = {
-            "market": market_name,
-            "type": candle_type,
             "interval": extended_interval,
-            "end_time": end_dt.isoformat(),
-            "limit": 1000
+            "endTime": endTime,
+            "limit": 1000,
         }
 
-        response = self.get("/candles", params=params, authenticated=False)
+        # Endpoint: /info/candles/<market>/<candle_type>
+        response = self.get(
+            f"/info/candles/{market_name}/{candle_type}",
+            params=params,
+            authenticated=False
+        )
 
         # Filter candles by startTime
-        candles = response.get("data", [])
+        candles = response.get("data", []) or []
         filtered_candles = [c for c in candles if c.get("timestamp", 0) >= startTime]
 
         coin = to_hyperliquid_market_name(name)
-        return MarketTransformer.transform_candles(filtered_candles, coin, interval)
+        return SyncMarketTransformer.transform_candles(filtered_candles, coin, interval)
 
     def user_fills(
         self,
@@ -245,15 +223,18 @@ class NativeSyncInfoAPI(BaseNativeSyncClient):
         params = {}
         if coin:
             params["market"] = normalize_market_name(coin)
-        if start_time:
-            params["start_time"] = start_time
-        if end_time:
-            params["end_time"] = end_time
 
-        response = self.get("/account/trades", params=params, authenticated=True)
+        # Endpoint: /user/trades
+        response = self.get("/user/trades", params=params, authenticated=True)
         trades = response.get("data", []) or []
 
-        return OrderTransformer.transform_user_fills(trades)
+        # Filter by time if provided
+        if start_time is not None:
+            trades = [t for t in trades if t.get("createdTime", t.get("created_time", 0)) >= start_time]
+        if end_time is not None:
+            trades = [t for t in trades if t.get("createdTime", t.get("created_time", 0)) <= end_time]
+
+        return SyncOrderTransformer.transform_user_fills(trades)
 
     def get_position_leverage(
         self,
@@ -278,11 +259,12 @@ class NativeSyncInfoAPI(BaseNativeSyncClient):
             )
 
         market_name = normalize_market_name(symbol)
-        params = {"markets": [market_name]}
+        params = {"market": [market_name]}
 
-        response = self.get("/account/leverage", params=params, authenticated=True)
+        # Endpoint: /user/leverage
+        response = self.get("/user/leverage", params=params, authenticated=True)
 
-        leverage_data = response.get("data", [])
+        leverage_data = response.get("data", []) or []
         if leverage_data:
             for lev in leverage_data:
                 if lev.get("market") == market_name:
