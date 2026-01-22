@@ -256,8 +256,10 @@ class NativeSyncExchangeAPI(BaseNativeSyncClient):
 
         for request in order_requests:
             try:
+                # Accept both 'name' (Pacifica) and 'coin' (Hyperliquid) fields
+                market_name = request.get("name") or request.get("coin")
                 result = self.order(
-                    name=request["coin"],
+                    name=market_name,
                     is_buy=request["is_buy"],
                     sz=request["sz"],
                     limit_px=request["limit_px"],
