@@ -7,7 +7,7 @@ Uses direct HTTP calls with requests and X10 signing infrastructure.
 
 import time
 import warnings
-from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR
+from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR, ROUND_DOWN
 from typing import Any, Dict, List, Optional
 
 from extended.api.base_native_sync import BaseNativeSyncClient, ExtendedAPIError
@@ -42,6 +42,21 @@ TIF_MAPPING = {
 class ExtendedValidationError(Exception):
     """Validation error for Exchange API."""
     pass
+
+
+def quantize_to_precision(value: Decimal, precision: int) -> Decimal:
+    """
+    Quantize a Decimal to the given precision (number of decimal places).
+
+    This ensures the Decimal serializes correctly for the API.
+    E.g., precision=0 means integer (14, not 14.0)
+          precision=2 means 2 decimal places (14.00)
+    """
+    if precision == 0:
+        return value.quantize(Decimal('1'), rounding=ROUND_DOWN)
+    else:
+        quantizer = Decimal(10) ** -precision
+        return value.quantize(quantizer, rounding=ROUND_DOWN)
 
 
 def parse_order_type(order_type: Optional[Dict[str, Any]]) -> tuple:
@@ -187,11 +202,16 @@ class NativeSyncExchangeAPI(BaseNativeSyncClient):
             # Get market model for order creation
             market = self._get_market(market_name)
 
+            # Quantize size to market precision to avoid "Invalid quantity precision" errors
+            # The API requires exact decimal representation matching asset_precision
+            size_decimal = Decimal(str(sz))
+            size_quantized = quantize_to_precision(size_decimal, market.asset_precision)
+
             # Create signed order using X10 infrastructure (all sync!)
             order = create_order_object(
                 account=self._stark_account,
                 market=market,
-                amount_of_synthetic=Decimal(str(sz)),
+                amount_of_synthetic=size_quantized,
                 price=Decimal(str(limit_px)),
                 side=side,
                 starknet_domain=self._starknet_domain,
