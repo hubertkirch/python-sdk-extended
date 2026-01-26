@@ -46,13 +46,27 @@ def to_hyperliquid_market_name(name: str) -> str:
 
 
 def calculate_sz_decimals(min_order_size_change) -> int:
-    """Calculate size decimals from minimum order size change."""
+    """
+    Calculate size decimals from minimum order size change.
+
+    Examples:
+        0.001 -> 3 (round to 3 decimal places)
+        0.01  -> 2 (round to 2 decimal places)
+        0.1   -> 1 (round to 1 decimal place)
+        1     -> 0 (round to whole numbers)
+        10    -> 0 (round to nearest 10, clamped to 0)
+        100   -> 0 (round to nearest 100, clamped to 0)
+    """
     if not min_order_size_change:
         return 0
     val = Decimal(str(min_order_size_change))
     if val <= 0:
         return 0
-    return abs(int(val.log10()))
+    # Use negative log10: 0.001 -> 3, 0.1 -> 1, 1 -> 0, 10 -> -1
+    result = -int(val.log10())
+    # Clamp to 0 for values >= 1 (minOrderSizeChange of 10, 100, etc.)
+    # since negative szDecimals isn't standard
+    return max(0, result)
 
 
 # ============================================================================
@@ -192,10 +206,18 @@ class SyncMarketTransformer:
                 max_lev_int = 50
 
             universe.append({
+                # Standardized Hyperliquid fields
                 "name": to_hyperliquid_market_name(market.get("name", "")),
                 "szDecimals": sz_decimals,
                 "maxLeverage": max_lev_int,
                 "onlyIsolated": False,
+                # Raw exchange fields
+                "minOrderSize": trading_config.get("minOrderSize", trading_config.get("min_order_size")),
+                "minOrderSizeChange": min_order_size_change,
+                "minPriceChange": trading_config.get("minPriceChange", trading_config.get("min_price_change")),
+                "maxMarketOrderValue": trading_config.get("maxMarketOrderValue", trading_config.get("max_market_order_value")),
+                "maxLimitOrderValue": trading_config.get("maxLimitOrderValue", trading_config.get("max_limit_order_value")),
+                "maxPositionValue": trading_config.get("maxPositionValue", trading_config.get("max_position_value")),
             })
 
         return {"universe": universe}
